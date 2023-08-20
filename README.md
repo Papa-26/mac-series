@@ -15,7 +15,8 @@ It contains:
         macpee.pdf
         macpuf.pdf
         macdope.pdf (will be added shortly)
-
+    * demos
+        MacDopeDemo.mp4 (quick and dirty OBSStudio animation)
 The four model directories are organized identically:
 
     * a batch file ('man', 'pee', 'puf', and 'dope') to start the corresponding simulation
