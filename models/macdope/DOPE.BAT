@@ -1,0 +1,2 @@
+readcon
+metawndo macdope
