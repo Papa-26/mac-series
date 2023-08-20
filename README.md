@@ -1,12 +1,13 @@
 A digital legacy for the Mac series of medical, educational computer simulations
 This repository serves the construction of browser based representations of the historic mac-series computer simulations for medical education.
+
 It contains:
-    models
+    #models
         macman
         macpee
         macpuf
         macdope
-    manuals
+    #manuals
         macman.pdf
         macpee.pdf
         macpuf.pdf
