@@ -14,7 +14,7 @@ It contains:
         macman.pdf
         macpee.pdf
         macpuf.pdf
-        macdope.pdf (will be added shortly)
+        macdope.pdf (exceeds github permitted file size)
     * demos
         MacDopeDemo.mp4 (quick and dirty OBSStudio animation)
 The four model directories are organized identically:
