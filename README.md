@@ -11,10 +11,10 @@ The repository contains:
         macpuf
         macdope
     * manuals
-        macman.pdf
-        macpee.pdf
-        macpuf.pdf
-        macdope.pdf (LFS)
+        MacMan.pdf
+        MacPee.pdf
+        MacPuf.pdf
+        MacDope.pdf (LFS)
     * demos
         MacDopeDemo.mp4 (quick and dirty OBSStudio animation)
 The four model directories are organized identically:
