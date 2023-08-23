@@ -14,7 +14,7 @@ The repository contains:
         macman.pdf
         macpee.pdf
         macpuf.pdf
-        macdope.pdf
+        macdope.pdf (LFS)
     * demos
         MacDopeDemo.mp4 (quick and dirty OBSStudio animation)
 The four model directories are organized identically:
