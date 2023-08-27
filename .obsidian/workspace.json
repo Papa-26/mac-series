@@ -18,8 +18,19 @@
                 "source": false
               }
             }
+          },
+          {
+            "id": "322c36914d869664",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.3.7"
+              }
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -147,7 +158,7 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "1b137e3f2f9e7dac",
+  "active": "322c36914d869664",
   "lastOpenFiles": [
     "README.md",
     "concept.png"
