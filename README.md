@@ -5,7 +5,7 @@ This repository serves the construction of browser based representations of the 
 
 The mac-series of educational computer simulations was originally designed in the early 1970s. It was a cooperative project between a British and a Canadian medical school. The software was written in FORTRAN and ran first on a main frame at McMaster, in the 1980s an updated version was issued on DOS at St. Bartholomew's. It was long before graphical user interfaces. 
 
-Thanks to [Jeff Par](https://github.com/jeffpar) the mac-series simulations now run in [browsers](https://www.pcjs.org/software/pcx86/app/other/mac-series/1.0/). Google Chrome or Brave are the recommended browsers. Set the operating frequency (right lower corner) as high as it will go.
+Thanks to [Jeff Par](https://github.com/jeffpar) the mac-series simulations now run in [browsers](https://www.pcjs.org/software/pcx86/app/other/mac-series/1.0/). Google Chrome or Brave are the recommended browsers. But with a bit of fiddling, you can even run it on a smart phone. I have suceeded on a recent Android. Set the operating frequency (right lower corner) as high as it will go.
 
 The repository contains:
 
