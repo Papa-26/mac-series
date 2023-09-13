@@ -14,9 +14,8 @@ The repository contains:
         macpee
         macpuf
         macdope
-    * manuals
-       
-	[MacMan.pdf](manuals/MacMan.pdf)
+    * manuals     
+	MacMan.pdf
         MacPee.pdf
         MacPuf.pdf
         MacDope.pdf
