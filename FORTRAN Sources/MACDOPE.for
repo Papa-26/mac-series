@@ -1,0 +1,3774 @@
+C
+C	Source Code obtained from M. Woerlee / G. Havenith June 2003
+C
+      SUBROUTINE DDRFIL(N,IARG,IND)
+C*** AMEND FORTRAN DIRECT ACCESS I/O THROUGHOUT
+C
+C      SUBROUTINE PROVIDING FACILITIES FOR ORGANISING DRUG
+C      FILE FOR THE SUPERDOPE PROGRAM
+C
+C      PARAMETERS
+C      N   --UTILITY CODE NO.
+C            1  INITIALISE DRUG FILE
+C            2  SEARCH FILE DIRECTORY FOR MATCH WITH DRUG CODED IARG
+C               RETURN SEQUENTIAL DRUG NO. OR -1 IF NOT FOUND
+C            3  REWRITE DIRECTORY ON FRONT OF FILE
+C            4  READ DIRECTORY
+C
+C      IARG         DRUG CODE NUMBER
+C      IND          SEQUENCE NO. OF DRUG IN FILE
+C
+C
+C      FILE FORMAT
+C            RECORD 1  #OF DRUGS IN FILE (I4 IN 72 CHAR. RECORD)
+C            RECORD 2-4 EACH 18I4 FORMAT CONTAINING DRUG CODES
+C                       FOR EACH DRUG HELD
+C            RECORD 5   SEPARATOR
+C            RECORD 6-20 SETS OF 14 RECORDS FOR EACH DRUG
+C                       1    KT -DRUG NAME 15A1
+C                       2    KT -ASSOCIATED TOXIC SYMPTOM 15A4
+C                       3-13  F- 52 DRUG PARAMETERS SETS OF 5F12.4
+C                       14   SEPARATOR
+C
+C
+      DIMENSION IBUF(36)
+      COMMON /DIR/KD,KDP,INC, NDR,INDIR(54),KN(15),XKTT(15),FF(52)
+C
+C ALWAYS REWIND FILE AT OUTSET
+      KDP=1
+      GOTO(100,200,300,400) ,N
+C  MODE=1
+C INITIALISE FILE DIRECTORY
+100   DO 110 I=1,4
+      KDP=I
+C110   WRITE(KD'KDP)
+      ENCODE(72,120,IBUF)
+110   WRITE(KD'KDP) IBUF
+      KDP=5
+120   FORMAT('0000',64X,'0000')
+      ENCODE(72,130,IBUF)
+      WRITE(KD'KDP) IBUF
+C     WRITE(KD,130)
+130   FORMAT('++++++++++',52X,'++++++++++')
+      RETURN
+C
+C    MODE=2
+C SEARCH DIRECTORY FOR MATCH WITH DRUG CODE IARG
+200   IF(INC.EQ.1) GOTO 220
+C READ DIRECTORY IF NOT IN CORE
+C     READ(KD,210) NDR,INDIR
+201   READ(KD'KDP) IBUF
+      DECODE(72,210,IBUF) NDR
+      DO 205 I=1,3
+      LL=18*(I-1)+1
+      LLL=LL+17
+      READ(KD'KDP) IBUF
+205   DECODE(72,211,IBUF) (INDIR(J),J=LL,LLL)
+210   FORMAT(I4)
+211   FORMAT(18I4)
+C210   FORMAT(I4/(18I4))
+      INC=1
+      KDP=1
+      IF(N.EQ.4) RETURN
+220   IF(NDR.EQ.0) GOTO 240
+      DO 230 I=1,NDR
+      IF(IARG-INDIR(I)) 230,250,230
+230   CONTINUE
+240   IND =-1
+241   RETURN
+250   IND =I
+      RETURN
+C
+C     MODE=3
+C  REWRITE DIRECTORY FILE
+300   IF(INC.NE.1) GOTO 320
+C     WRITE(KD,310) NDR,INDIR
+      ENCODE(72,210,IBUF)NDR
+      WRITE(KD'KDP) IBUF
+      DO 305 I=1,3
+      KK=18*(I-1)+1
+      KKK=KK+17
+      ENCODE(72,211,IBUF) (INDIR(J),J=KK,KKK)
+      WRITE(KD'KDP)IBUF
+305   CONTINUE
+C310   FORMAT(I4/(18I4))
+      RETURN
+320   IND=-1
+      RETURN
+C   MODE=4
+C READ DIRECTORY
+400   IF(INC.EQ.1)  RETURN
+      GOTO 201
+C     READ(KD,410) NDR,INDIR
+C410   FORMAT(I4/(18I4))
+C     INC=1
+C     KDP=1
+C     RETURN
+      END
+      SUBROUTINE DRWDR(ICH,IARG,IND)
+C*** AMEND FORTRAN DIRECT ACCESS I/O THROUGHOUT
+C++++++++++++++++++++++++++++++++++++++++++++++++++++
+C+++++++++++++++++++++++++++++++++++++++++++++++++++++
+C       SUBROUTINE TO READ OR WRITE TO OR FROM DRUG FILE
+C       PARAMETERS
+C      ICH  =  1,READ   2,WRITE   3,LIST DRUGS IN FILE
+C      IARG    DRUG CODE NUMBER
+C       IND   SEQUENCE NO. OF DRUG   -1 IF NOT FOUND
+C
+      DIMENSION IBUF(36)
+      COMMON/DIR/ KD,KDP,INC,NDR,INDIR(54),KN(15),XKTT(15),FF(52)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,ITRIG(73),NEOF
+      DATA IY/'Y'/
+C
+C
+      GOTO (100,1000,2000) ,ICH
+C READ FILE
+100   CALL DDRFIL(2,IARG,IND)
+      IF(IND .LT.0) RETURN
+C CALCULATE POSITION OF DRUG INFORMATION
+      ISKP=5+14*(IND -1)
+      KDP=ISKP+1
+C     DO 110 I=1,ISKP
+C110   READ(KD,120) K
+C120   FORMAT(A1)
+C NOW ACCESS DATA
+C     READ(KD,130) KN,XKTT,FF
+      READ(KD'KDP) IBUF
+      DECODE(72,130,IBUF) KN
+      READ(KD'KDP) IBUF
+      DECODE(72,131,IBUF)XKTT
+      DO 125 I=1,11
+      LL=5*(I-1)+1
+      LLL=LL+4
+      IF(I.EQ.11) LLL=LLL-3
+      READ(KD'KDP) IBUF
+      DECODE(72,132,IBUF) (FF(J),J=LL,LLL)
+ 125  CONTINUE
+C130   FORMAT(15A1/15A4/(5F12.4))
+130   FORMAT(15A1)
+131   FORMAT(15A4)
+132   FORMAT(5F12.4)
+      RETURN
+C
+C
+C WRITE TO FILE
+1000  CALL DDRFIL(2,IARG,IND)
+C IF NOT ALREADY IN FILE WRITE IMMEDIATELY IF SPACE
+C ELSE ASK WHETHER TO OVERWRITE
+      IF(IND ) 1500,1500,1010
+1010  WRITE(KT,1020)
+1020  FORMAT(' DRUG ALREADY STORED. IS IT TO BE OVERWRITTEN?')
+      READ(INI,1030) IF
+1030  FORMAT(A1)
+      IF(IF.EQ.IY ) GOTO 1100
+      IND=-1
+      RETURN
+C CALCULATE POSITION IN FILE TO BE WRITTEN TO
+1100  ISKP=5+14*(IND -1)
+      KDP=ISKP+1
+C      DO 1110  I=1,ISKP
+C1110  READ(KD,1120) K
+C1120  FORMAT(A1)
+C     WRITE(KD,1130) KN,XKTT,FF
+      ENCODE(72,130,IBUF) KN
+      WRITE(KD'KDP) IBUF
+      ENCODE(72,131,IBUF) XKTT
+      WRITE(KD'KDP) IBUF
+      DO 1120 I=1,11
+      LL=5*(I-1)+1
+      LLL=LL+4
+      IF(I.EQ.11) LLL=LLL-3
+      ENCODE(72,132,IBUF) (FF(J),J=LL,LLL)
+1120  WRITE(KD'KDP) IBUF
+C1130   FORMAT(15A1/15A4/(5F12.4))
+      KDP=ISKP+14
+      ENCODE(72,1140,IBUF)
+      WRITE(KD'KDP) IBUF
+C     WRITE(KD,1140)
+1140  FORMAT('++++++++++',52X,'++++++++++')
+C REWRITE DIRECTORY IMMEDIATELY
+      INDIR(IND)=IARG
+      CALL DDRFIL(3,IARG,IND)
+      RETURN
+C
+C
+C TEST WHETHER DIRECTORY FULL IF NEW DRUG
+1500  IF(NDR.EQ.54) GOTO 1600
+      NDR =NDR+1
+      IND=NDR
+      GOTO 1100
+1600  WRITE(KT,1610)
+1610  FORMAT(' DIRECTORY FULL')
+      IND=-1
+      RETURN
+C LIST DRUGS IN DISC FILE
+C FIRST GET DIRECTORY
+2000  CALL DDRFIL(4,IARG,IND)
+      IF(NDR.EQ.0) RETURN
+      WRITE(KT,405)
+405   FORMAT(' DRUGS HELD ON DISC FILE')
+      ISKP=5
+      DO 500 I=1,NDR
+C      DO 410 J=1,ISKP
+      KDP=KDP+ISKP
+C410   READ(KD,420) K
+C420   FORMAT(A1)
+C     READ(KD,430) KN
+      READ(KD'KDP) IBUF
+      DECODE(72,130,IBUF) KN
+      ISKP=13
+500      WRITE(KT,431) KN
+431   FORMAT(1X,15A1)
+      RETURN
+      END
+/*EOR
+ 
+/*EOR
+ 
+/*EOR
+C MACDOPEX -- VERSION 80.1 -- LIST OF CHANGEABLE PARAMETERS OR FACTORS
+C
+C                      PATIENT FACTOR LIST                   APPROXIMATE
+C                      -------------------                  NORMAL VALUE
+C                                                        (FOR 70 KG MAN)
+C    RATE CONSTANTS ARE FIRST ORDER
+C * VOLUME FACTORS DESIGNATED WITH ASTERISK CAN ONLY BE
+C   MEANINGFULLY CHANGED BEFORE A RUN HAS TAKEN PLACE
+C                        ------
+C 1.GASTRIC EMPTYING RATE (1/H)                                      0.5
+C 2.GASTRIC PH OF THE ABSORBING SURFACE                              2.5
+C 3.PLASMA ALBUMIN CONENTRATION (G/DL)                                 5
+C *4.VOLUME OF PLASMA COMPARTMENT (L)                                  3
+C *5.LIPID COMPARTMENT WEIGHT  (KG)                                   12
+C *6.INTERSTITIAL FLUID COMPARTMENT SIZE (L)                          14
+C *7.INTRACELLULAR FLUID COMPARTMENT SIZE (L)                         26
+C 8.HEPATIC ENZYMATIC CATABOLIC FUNCTION,RATIO TO NORMAL               1
+C 9.GLOMERULAR FILTRATION RATE (L/H)                                 7.5
+C   (7.5 L/HR CORRESPONDS TO 120 ML/MIN)
+C10.URINE PH                                                         5.5
+C11.URINE OUTPUT (L/H)                                               0.066
+C   12.RENAL TUBULAR EXCRETORY FUNCTION,RATIO TO NORMAL                1
+C*13.VOLUME OF INTESTINE (L)                                          0.4
+C14.PLASMA GLOBULIN 1 FRACTION CONCENTRATION (G/DL)                    1
+C15.RATIO OF BODY WEIGHT TO (STANDARD) 70 KG                           1
+C16.INTESTINAL EMPTYING RATE (1/H)                                     1
+C17.RENAL TUBULAR REABSORPTIVE FUNCTION, RATIO TO NORMAL               1
+C18.PLASMA GLOBULIN 2 FRACTION CONCENTRATION (G/DL)                    1
+C19.BLOOD PH                                                         7.4
+C*20.VOLUME OF LIVER PLASMA COMPARTMENT (L)                          1.2
+C*21.GASTRIC VOLUME ,FASTING (L)                                     0.2
+C22.SMALL INTESTINE ABSORBING SURFACE PH, TOP OF RANGE               8.5
+C23.RATE OF EQUILIBRIUM OF LIVER COMPARTMENT (1/H)                    23
+C
+C
+C
+C MACDOPE -- LIST OF CHANGEABLE PARAMETERS OR FACTORS  (CONTD.)
+C
+C                      LIST OF 'DRUG FACTORS'
+C                      ----------------------
+C
+C    RATE CONSTANTS WITH DIMENSIONS 1/H ARE FIRST ORDER
+C 1.PK
+C  (IF A DRUG IS NEITHER ACID OR BASE, IT IS ENTERED AS AN
+C   ACID (FACTOR 17 = 1) WITH A PK OF 10).
+C 2.ABSORPTION RATE OF PARENTERAL DEPOSIT (1/H)
+C 3.LIPID / WATER PARTITION RATIO
+C 4.LIPID EQUILIBRATION RATE (1/H)
+C 5.EXTRA/INTRACELLULAR DISTRIBUTION RATIO
+C 6.INTRACELLULAR EQUILIBRATION RATE (1/H)
+C  (RATE OF EQUILIBRATION WITH INTRACELLULAR SPACE )
+C 7.INTESTINAL ABSORPTION RATE (1/H)
+C ( OF THE NON-IONIZED PART OF THE DRUG FROM THE SMALL INTESTINE).
+C 8. (PORTAL TRANSFER RATIO IN ORIGINAL MODEL)
+C 9.RENAL TUBULAR PERMEABILITY (L/H)
+C  (AMOUNT OF SOLUTION OF THE NON-IONIZED DRUG WHICH IS
+C   DIFFUSED BACK PER HOUR).
+C10.MAXIMUM PLASMA BINDING CAPACITY (MICROMOL/G)
+C  (THIS INDICATES HOW MANY MMOL OF DRUG CAN MAXIMALLY BE BOUND
+C   BY 1 KG OF THE PLASMA PROTEIN SPECIFIED - SEE FACTOR 38).
+C11.PLASMA BINDING CONSTANT (L/MICROMOL)
+C  (INVERSE OF PLASMA PROTEIN CONCENTRATION AT WHICH 50:  OF
+C    A VERY SMALL DRUG CONCENTRATION WOULD BE BOUND).
+C12.USUAL ADMINISTRATION ROUTE
+C   (UN-RESTRICTED = 0, ORAL ONLY = 1, PARENTERAL ONLY = 2)
+C13.MAXIMUM USUAL DOSE (MG)
+C  (LARGEST DOSE THAT IS USUALLY RECOMMENDED FOR A 70 KG MAN).
+C14.MINIMUM USUALLY AVAILABLE ORAL DOSE (MG)
+C  (ONE HALF OF THE SMALLEST COMMERCIALLY AVAILABLE TABLET).
+C15.INTERSTITIAL PARTITION RATIO
+C16.INTERSTITIAL EQUILIBRATION RATE (1/H)
+C17.INDEX SPECIFYING IF THE DRUG IS ACID (1) OR BASE (0)
+C18.GRAPH MEDIAN SCALE OR MEAN THERAPEUTIC LEVEL (MG/LITRE)
+C  (THIS DETERMINES THE SCALE ON THE GRAPHICAL DISPLAY. THE
+C   SCALE WILL BE ADJUSTED SUCH THAT THE GRAPH MEDIAN OCCURS AT
+C   THE FIRST OF THE THREE DECADES AVAILABLE ON THE PRINT LINE).
+C
+C
+C                        LIST OF DRUG FACTORS
+C                        --------------------
+C                          (CONTINUED)
+C
+C19.50  LETHAL LEVEL (MG/L)
+C  (BLOOD LEVEL AT WHICH ROUGHLY 50  OF PEOPLE GIVEN THE DRUG
+C   WOULD DIE).
+C20.RATE OF DESTRUCTION BY GASTRIC ACID (1/H)
+C21.GASTRIC ABSORPTION RATE (1/H)
+C  (THE NON-IONIZED PART OF THE DRUG IS ABSORBED)
+C22.TOXIC LEVEL (MG/L)
+C  (DRUG LEVEL AT WHICH TOXIC REACTIONS ARE LIKELY).
+C23.'VMAX' OF LIVER ENZYMES ,SATURABLE METABOLISM  (MG/H)
+C24.LIVER ENZYME DISSOCIATION CONSTANT ,SATURABLE METABOLISM (L/MG)
+C25.LIVER METABOLISM RATE, FIRST ORDER (1/H)
+C26.'VMAX' OF THE RENAL SECRETORY MECHANISM (MG/H)
+C27.RENAL SECRETORY DISSOCIATION CONSTANT (L/MG)
+C28.'VMAX' OF RENAL REABSORPTIVE MECHANISM (MG/H)
+C29.RENAL REABSORPTIVE DISSOCIATION CONSTANT (H/MG)
+C30.HEPATIC ENZYME INDUCTION FACTOR (L/HR MG)
+C  (IF THE DRUG HAS NO ENZYME-INDUCING CAPACITIES THIS FACTOR IS 0)
+C31.RENAL SECRETORY INHIBITION FACTOR, NON-COMPETITIVE (L/MG)
+C32.RENAL REABSORPTIVE INHIBITION FACTOR, NON-COMPETITIVE (L/MG)
+C33.DIURETIC FACTOR (L/MG)
+C34.TIME IN HOURS FOR DRUG PREPARATION TO DISSOLVE (FIRST PART)
+C35.ROUTE FOR PRODUCT OF FIRST ORDER LIVER METABOLIC PROCESS
+C  0=PRODUCT NOT DESCRIBED, 1=PASS TO PLASMA, 2. PASS THROUGH
+C  ENTERO-HEPATIC DELAY LINE .
+C36. DRUG CODE OF SATURABLE METABOLIC PRODUCT
+C37.DRUG CODE OF FIRST ORDER METABOLIC PRODUCT
+C38.TYPE OF PLASMA PROTEIN BINDING, IF PRESENT.
+C  (THIS HAS A VALUE 1, 2 OR 3, DEPENDING UPON THE MAIN PLASMA
+C   PROTEIN FRACTION TO WHICH THIS DRUG BINDS).
+C39.TYPE OF INTERACTION WITH A LIVER ENZYME SYSTEM.
+C  (NO LIVER DEGRADATION = 0
+C   NON-SPECIFIC MICROSOMAL SYSTEM = 1
+C   ADDITIONAL ENZYMES IN PATHWAYS OF INTERMEDIARY METABOLISM=2-9
+C   OTHERWISE A NUMBER LARGER THAN 10 CAN BE SPECIFIED TO DEFINE
+C   ANOTHER ENZYME SYSTEM WHICH CAN BE SUBJECT TO COMPETITIVE
+C   INHIBITION BY DRUGS OR METABOLITES).
+C40.RENAL SECRETORY SYSTEM TYPE
+C  (NO ACTIVE SECRETION = 0
+C   WEAK ORGANIC ACID = 1
+C   WEAK ORGANIC BASE = 2
+C   OTHERS = 3-9
+C   OTHERWISE A NUMBER LARGER THAN 10 CAN BE SPECIFIED TO DEFINE
+C   SOME OTHER SYSTEM).
+C41.RENAL REABSORPTIVE SYSTEM TYPE
+C   (SAME AS ABOVE).
+C42.SITE OF TOXIC AND LETHAL REACTIONS
+C   (PLASMA=0, STOMACH=4, INTESTINE=5,
+C    INTERSTITIAL SPACE=7, INTRACELLULAR SPACE=8)
+C43. DEFAULT DISPLAY 1 GIVES 15MIN OUTPUT FOR 3 HOURS THEN 2,3,4
+C    FOR 30MIN,6HR;1HR,12HR;2HR,24HR
+C44.MOLECULAR WEIGHT
+C45.ROUTE CODE FOR PRODUCT OF SATURABLE LIVER METABOLISM
+C  0=DUMP DRUG, 1=PASS METABOLITE TO PLASMA, 3. PASS THROUGH
+C  ENTERO-HEPATIC DELAY LINE TO INTESTINES
+C 46.SITE FOR METABOLISM ,  0=LIVER, 1=GENERAL    ,-1 LIVER (FIRST ORDER)
+C   INTESTINAL (SATURABLE)
+C 47.SECOND TIME OF DRUG DISSOLUTION (SEE 34 ABOVE)
+C 48. PROPORTION OF TOTAL ORAL DOSE GOING TO DISSOLUTION GOING TO ROUTE 47
+C     (REST VIA ROUTE 34)
+C 49. DEFAULT PRECISION FACTOR (0 WILL BE IGNORED)
+C 50. SPARE
+C 51. DRUG SERIAL CODE NUMBER
+C 52. DRUG NAME CODE (USED BY SYSTEM TO RECOGNISE DRUG NAME)
+C  (UNIQUE FOR EACH DRUG, CALCULATED BY ADDING CODES FOR THE
+C   LETTERS IN THE DRUG NAME - SEE SUBROUTINE 'MXSCN'. ANY
+C   CURRENTLY UNACCEPTABLE NAME CODE IS GIVEN AUTOMATICALLY AS
+C   A (NEGATIVE) ERROR NUMBER IF YOU TRY TO PRESCRIBE IT).
+C
+C
+C
+C                      LIST OF DRUGS AVAILABLE
+C                      -----------------------
+C
+C      DRUG              MEAN THERAPEUTIC               REMARKS
+C(OTHER NAMES IN           RANGE (MG/L)              AVAILABILITY
+CBRACKETS ARE NOT
+C RECOGNISED)
+C
+CASPIRIN*                 20 (ARBITRARY)      *TABS: 300, 325 MG AND
+C  (ACETYLSALICYLIC ACID)                          MANY OTHERS
+C
+CDIGOXIN                  0.0009 - 0.002       TABS: 0.0625, 0.125,
+C  (LANOXIN)                                         0.25 AND .5 MG
+C                                              INJ: 0.05 AND 0.25 MG/ML
+C
+CSALICYLATE*              20 (ARBITRARY)      *NORMALLY GIVEN AS ASPIRIN
+C
+CGENTAMYCIN+              10                  +0.5 G/2ML; 1.0 G/2ML
+C  (KANTREX)
+C
+CINULIN+                  250 (USEFUL)        +FOR PHYSIOLOGICAL STUDIES
+C                                                   ONLY
+CPHENOBARBITONE&           10 - 30              TABS: 15,30,60,100 MG
+C  (LUMINAL)                                   INJ: 150 MG/ML
+C
+CLIGNOCAINE+#              1.5 - 4             +XYLOCAINE HCL(IV)
+C  (XYLOCAINE)                                    20 MG/ML
+C
+CDIGITOXIN*               ROUGHLY 8X DIGOXIN  *DIGITALINE TABS 0.1 MG
+C
+CPENTOBARBITONE&           7.5 (ARBITRARY)      CAPS: 50, 100 MG
+C  (NEMBUTAL)                                  INJ: 50 MG/ML
+C
+CTHIOPENTONE+             10 (ARBITRARY)      +ANAESTHETIC AGENT
+CPENTOTHAL
+C
+CAMITRPTYLINE             AROUND 0.1           TABS: 10,25,50 MG
+C  (ELAVIL)                                    INJ: 10 MG/ML
+C
+CPROPRANOLOL              OVER 0.075           TABS: 10,40,80 MG
+C  (INDERAL)                                    INJ: 1MG/ML
+C
+CAMPHETAMINE              AROUND 3.            NOT LISTED?
+C
+CPROCAINAMIDE             4 - 8                CAPS: 250, 375 MG
+C  (PRONESTYL)                                 INJ: 100 MG/ML
+C
+CPHENYTOIN                10 - 25              CAPS: 30, 100 MG
+C  (DILANTIN)                                  INJ : 50 MG/ML
+C
+CPENICILLIN (G)+          OVER 10             +THIS TYPE OF PENICILLIN
+C  (BENZYLPENICILLIN)                          IS NOT NORMALLY GIVEN BY
+C                                              MOUTH - REASONS CAN BE
+C                                              EXAMINED BY MACDOPE.
+C
+C  DIFFERENT CLINICAL SITUATIONS CALL FOR DIFFERENT INTENSITY OF DRUG
+C  ACTION. 'THERAPEUTIC LEVELS' GIVEN ABOVE ARE ONLY A ROUGH GUIDE AND
+C  WERE USED TO SET UP PLOTTING AXES.
+/*EOR
+ 
+/*EOR
+ 
+/*EOR
+  24
+-349-373-309-314-121-363-335-198-342-242-214-285-263-237-347-196-248-277
+-471-311-280-452-374-159   0   0   0   0   0   0   0   0   0   0   0   0
+   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0   0
+++++++++++                                                    ++++++++++
+SALICYLURATE
+TINNITUS,SWEATING,NAUSEA
+      4.0000      0.3000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      0.0000      0.0000
+      0.0000      0.0000   9999.0000      1.0000      1.0000
+      0.0000      1.0000     20.0000    480.0000      0.0000
+      0.0000    200.0000      0.0000      0.0000      0.0000
+    200.0000      0.0500      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      0.0000      1.0000
+      0.0000      0.0000      0.0000    217.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      1.0000   -349.0000
+++++++++++                                                    ++++++++++
+PARACETAMOL
+VOMITING,HAEMORRHAGE
+     10.0000      0.0000      0.0000      0.0000      1.0000
+      2.0000     10.0000      1.0000      1.0000      0.8000
+      0.0100      0.0000   5000.0000      1.0000      1.0000
+     10.0000      1.0000     25.0000    580.0000      0.0000
+     10.0000    230.0000   1000.0000      0.0260      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+   -285.0000      0.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    151.0000      1.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      1.0000   -373.0000
+++++++++++                                                    ++++++++++
+SALACGLUC
+TINNITUS,SWEATING,NAUSEA
+      3.0000      0.3000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      0.0000      0.0000
+      0.0000      0.0000   9999.0000      1.0000      1.0000
+      0.2000      1.0000     20.0000    480.0000      0.0000
+      0.0000    200.0000      0.0000      0.0000      0.0000
+    100.0000      0.2000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      0.0000      1.0000
+      0.0000      0.0000      0.0000    217.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      1.0000   -309.0000
+++++++++++                                                    ++++++++++
+SALICYLATE
+TINNITUS,SWEATING,NAUSEA
+      3.0000      1.0000      0.5000      0.3000      0.5000
+      0.5000     20.0000      1.0000    300.0000     50.0000
+      0.0010      1.0000   2000.0000      1.0000      1.0000
+      0.5000      1.0000     20.0000   2500.0000      0.0000
+     20.0000    450.0000     60.0000      0.1500      0.1400
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      1.0000      1.0000
+      1.0000      0.0000      0.0000    160.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      4.0000   -314.0000
+++++++++++                                                    ++++++++++
+MEGX
+DIZZINESS,AMNESIA
+      7.9000      3.0000      0.3000      0.5000      1.5000
+      0.3000     20.0000      1.0000      0.0000      3.0000
+      0.0070      0.0000    200.0000      1.0000      3.0000
+      0.5000      0.0000      2.5000     15.0000      0.0000
+      6.0000      4.0000      0.0000      0.0000     24.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      1.0000
+      0.0000   -159.0000      1.0000      1.0000      2.0000
+      0.0000      0.0000      0.0000    261.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      8.0000   -121.0000
+++++++++++                                                    ++++++++++
+LIGNOCAINE
+HYPOTENSION,CONVULSIONS
+      7.9000      0.4000      2.0000      0.3000      2.0000
+      1.5000      0.8000      1.0000      0.0000      4.0000
+      0.0110      0.0000    400.0000      1.0000      1.0000
+      3.0000      0.0000      2.5000     40.0000      0.0000
+      0.7000      5.5000    600.0000      0.0800      0.0000
+    200.0000      0.0550      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+   -121.0000      0.0000      1.0000      1.0000      2.0000
+      0.0000      7.0000      0.0000    289.0000      1.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      8.0000   -363.0000
+++++++++++                                                    ++++++++++
+NORTRIPTYLINE
+TACHYCARDIA,BLURRED VISION
+      9.4000      0.3300      0.9300      0.3000    300.0000
+      2.0000     10.0000      1.0000      0.0000      0.0200
+     25.0000      0.0000    250.0000      1.0000    200.0000
+      2.0000      0.0000      0.1000      2.0000      0.0000
+      5.0000      1.0000    100.0000      0.3500      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+   -198.0000      0.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    300.0000      1.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      1.0000   -335.0000
+++++++++++                                                    ++++++++++
+HYDROXYNT
+TACHYCARDIA,BLURRED VISION
+      9.4000      0.3300      0.7000      3.0000     15.0000
+     20.0000      1.0000      1.0000      0.0000      0.0200
+      7.0000      0.0000    250.0000      1.0000      5.0000
+     20.0000      0.0000      0.1000      2.0000      0.0000
+      0.1000      1.0000      0.0000      0.0000      0.0000
+    400.0000      0.1000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      1.0000      2.0000
+      0.0000      0.0000      0.0000    316.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      1.0000   -198.0000
+++++++++++                                                    ++++++++++
+SALICYLATEM
+TINNITUS,SWEATING,NAUSEA
+      3.0000      1.0000      0.5000      0.3000      0.5000
+      0.5000     20.0000      1.0000    300.0000     50.0000
+      0.0010      1.0000   2000.0000      1.0000      1.0000
+      0.5000      1.0000     20.0000   2500.0000      0.0000
+     20.0000    450.0000     60.0000      0.1500      0.1400
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      1.0000
+   -349.0000   -309.0000      1.0000      1.0000      1.0000
+      1.0000      0.0000      0.0000    160.0000      1.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      4.0000   -342.0000
+++++++++++                                                    ++++++++++
+ASPIRINM
+TINNITUS,SWEATING,NAUSEA
+      3.5000      0.3300      0.0000      0.0000      0.5000
+      0.5000     20.0000      1.0000     60.0000     40.0000
+      0.0010      1.0000   2000.0000      1.0000      1.0000
+      0.5000      1.0000     20.0000    150.0000      0.0000
+      6.0000    100.0000      0.0000      0.0000     18.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      1.0000      1.0000
+      0.0000   -342.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    180.0000      0.0000
+      1.0000      0.0000      0.0000      0.0000      0.0000
+      2.0000   -242.0000
+++++++++++                                                    ++++++++++
+ASPIRIN
+TINNITUS,SWEATING,NAUSEA
+      3.5000      0.3300      0.0000      0.0000      0.5000
+      0.5000     20.0000      1.0000     60.0000     40.0000
+      0.0010      1.0000   2000.0000      1.0000      1.0000
+      0.5000      1.0000     20.0000    150.0000      0.0000
+      6.0000    100.0000      0.0000      0.0000     18.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      1.0000      1.0000
+      0.0000   -314.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    180.0000      0.0000
+      1.0000      0.0000      0.0000      0.0000      0.0000
+      2.0000   -214.0000
+++++++++++                                                    ++++++++++
+CONJUGATE
+VOMITING,HAEMORRHAGE
+      5.0000      0.3000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      0.0000      0.0000
+      0.0000      0.0000   9999.0000      1.0000      1.0000
+      1.0000      1.0000     20.0000    580.0000      0.0000
+      0.0000    230.0000      0.0000      0.0000      0.0000
+    200.0000      0.4000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      0.0000      1.0000
+      0.0000      0.0000      0.0000    217.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      1.0000   -285.0000
+++++++++++                                                    ++++++++++
+OXPRENOLOL
+NAUSEA,DIZZINESS
+      9.5000      3.0000      0.0100      0.3000      2.0000
+      0.3000     10.0000      1.0000      0.0000      3.0000
+      0.0600      0.0000   1000.0000      1.0000      9.0000
+      1.2000      0.0000      0.0750     75.0000      0.0000
+      5.0000     30.0000    200.0000      0.1600      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+   -237.0000      0.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    302.0000      1.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+     13.0000   -263.0000
+++++++++++                                                    ++++++++++
+METABOXP
+NAUSEA,DIZZINESS
+      9.4500      3.0000      0.0100      0.3000      1.0000
+      1.0000     20.0000      1.0000      0.0000      3.0000
+      0.0050      0.0000   1000.0000      1.0000      1.0000
+      1.0000      0.0000      0.0750    250.0000      0.0000
+      2.0000    100.0000      0.0000      0.0000      0.0000
+    200.0000      0.0300      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    302.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+     13.0000   -237.0000
+++++++++++                                                    ++++++++++
+AMPICILLIN
+CONVULSIONS
+      2.6500      0.3500      0.0000      0.0000      0.0000
+      0.0000      1.0000      1.0000      0.0000      0.2200
+      0.0300      0.0000   9999.0000      1.0000      1.0000
+      0.5000      1.0000     10.0000    400.0000      0.0000
+      5.0000    150.0000      0.0000      0.0000      0.8000
+    400.0000      0.0100      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      2.0000      1.0000
+      0.0000   -277.0000      1.0000      1.0000      1.0000
+      0.0000      0.0000      0.0000    349.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+     16.0000   -347.0000
+++++++++++                                                    ++++++++++
+HYDROXYPT
+NAUSEA,BLURRED VISION
+      8.3000      0.2500      0.0100      0.3000      2.0000
+      6.0000      0.5000      1.0000      0.0000      2.5000
+      0.0400      0.0000    300.0000      1.0000      2.0000
+      6.0000      1.0000     17.5000    150.0000      0.0000
+      1.0000     50.0000      0.0000      0.0000      0.5000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    274.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+     16.0000   -196.0000
+++++++++++                                                    ++++++++++
+PHENYTOIN
+NAUSEA,BLURRED VISION
+      8.3000      0.0800      0.0100      0.3000     15.0000
+      0.5000     10.0000      1.0000      1.0000      2.5000
+      0.1000      0.0000    500.0000      1.0000     15.0000
+      4.0000      1.0000     17.5000     70.0000      0.0000
+      0.1000     25.0000     17.0000      0.2000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+   -196.0000      0.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    274.0000      1.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+     16.0000   -248.0000
+++++++++++                                                    ++++++++++
+METABAMP
+CONVULSIONS
+      2.6500      0.5000      0.0000      0.0000      0.0000
+      0.0000     20.0000      1.0000      0.0000      0.0070
+      0.7000      0.0000   9999.0000      1.0000      0.8000
+      2.0000      1.0000     10.0000    400.0000      0.0000
+      5.0000    150.0000      0.0000      0.0000      0.0000
+    400.0000      0.1000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      2.0000      0.0000
+      0.0000      0.0000      1.0000      0.0000      1.0000
+      0.0000      0.0000      0.0000    349.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+     16.0000   -277.0000
+++++++++++                                                    ++++++++++
+PHENOBARBITONE
+DIZZINESS,LETHARGY
+      7.3000      0.2000      0.2000      0.3000      1.0000
+      0.5000      0.5000      1.0000      5.0000      0.4000
+      0.0350      0.0000    800.0000      1.0000      1.0000
+      2.0000      1.0000     15.0000    500.0000      0.0000
+      0.3000    200.0000      0.0000      0.0000      0.1250
+      0.0000      0.0000      0.0000      0.0000      0.0100
+      0.0000      0.0000      0.0000      0.0000      1.0000
+      0.0000   -311.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    232.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      7.0000   -471.0000
+++++++++++                                                    ++++++++++
+HYDROXPNBRTN
+DIZZINESS,LETHARGY
+      7.3000      0.5000      0.2000      3.0000      0.2000
+      0.5000      3.0000      1.0000      0.0000      0.4000
+      0.0250      0.0000    300.0000      1.0000      1.0000
+      2.0000      1.0000     15.0000    500.0000      0.0000
+      1.0000    200.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    248.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      7.0000   -311.0000
+++++++++++                                                    ++++++++++
+DIAZEPAM
+DROWSINESS,ATAXIA
+      3.3000      0.0800      4.0000      0.3000     30.0000
+      0.3000      0.2000      1.0000      1.0000      0.0700
+     10.0000      0.0000    250.0000      1.0000     20.0000
+      1.0000      0.0000      0.1000     12.0000      0.0000
+      0.3500      6.0000      0.0000      0.0000      1.2000
+      0.0000      0.0000      0.0000      0.0000      0.0010
+      0.0000      0.0000      0.0000      0.0000      1.0000
+      0.0000   -452.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    285.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      1.0000   -280.0000
+++++++++++                                                    ++++++++++
+DESMEDIAZEPAM
+DROWSINESS,ATAXIA
+      3.3000      0.0800      4.0000      0.3000      5.0000
+      0.3000      0.2000      1.0000      0.1000      0.0500
+     10.0000      0.0000    250.0000      1.0000      2.0000
+      1.0000      0.0000      0.1000     12.0000      0.0000
+      0.2000      6.0000    100.0000      0.0200      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+   -374.0000      0.0000      1.0000      1.0000      0.0000
+      0.0000      0.0000      0.0000    271.0000      1.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      1.0000   -452.0000
+++++++++++                                                    ++++++++++
+OXAZCONJUGATE
+DROWSINESS,ATAXIA
+      2.0000      0.3300      0.0000      0.0000      0.0000
+      0.0000      1.0000      1.0000      0.0000      0.0000
+      0.0000      0.0000    250.0000      1.0000      1.0000
+      0.3000      0.0000      0.1000      5.6000      0.0000
+      0.5000      2.2000      0.0000      0.0000      0.0000
+    100.0000      0.1000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      1.0000      2.0000
+      0.0000      0.0000      0.0000    311.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      1.0000   -374.0000
+++++++++++                                                    ++++++++++
+HDMA
+DIZZINESS,AMNESIA
+      7.9000      3.0000      0.0000      0.0000      0.0000
+      0.0000     20.0000      1.0000      1.8000      0.0000
+      0.0000      0.0000    200.0000      1.0000      1.0000
+      4.0000      0.0000      2.5000     15.0000      0.0000
+      6.0000      1.3000      0.0000      0.0000      2.0000
+    300.0000      1.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      0.0000      0.0000      1.0000      1.0000      2.0000
+      0.0000      0.0000      0.0000    261.0000      0.0000
+      0.0000      0.0000      0.0000      0.0000      0.0000
+      8.0000   -159.0000
+++++++++++                                                    ++++++++++
+/*EOR
+ 
+/*EOR
+ 
+/*EOR
+      PROGRAM MACDPX
+      COMMON /DIR/KD,KDP,INC,NDR,INDIR(54),KN(15),XKTT(15),FF(52)
+C*** SET UP DIRECT ACCESS DRUG DATA FILE
+      DEFINE FILE 3(1000,36,U,KDP)
+C PARAMETER PREPARES FOR LINKAGE TO CAI SYSTEM
+      CALL SUB4(0)
+      STOP
+      END
+      SUBROUTINE SUB4(MCAID)
+C*****************************************************************
+C      MACDOPE (SIMULATION OF PHARMACOKINETICS)
+C AUTHORS: DR.R.BLOCH, DR.G.SWEENEY, DR.K.AHMED
+C          MCMASTER UNIVERSITY MEDICAL SCHOOL, HAMILTON, ONT. CANADA
+C          DR.INGRAM AND PROF.C.J.DICKINSON
+C          ST.BARTHOLOMEW'S MEDICAL COLLEGE, W.SMITHFIELD, LONDON, U.K.
+C*** NOT TO BE RELEASED TO THIRD PARTY WITHOUT PERMISSION OF AUTHORS ***
+C
+C*******************************************************************************
+C
+C                             DISCLAIMER.
+C                             -----------
+C
+C      THE AUTHORS OF THESE PROGRAMMES MAKE  NO  GUARANTEE OF THEIR
+C  ACCURACY NOR THEIR RELEVANCE TO PARTICULAR FIELDS OF STUDY OR
+C  RESEARCH.
+C  AMENDMENTS AND IMPROVEMENTS HAVE BEEN MADE OVER MANY YEARS AND WILL
+C  CONTINUE.
+C  IT IS A CONDITION OF USE OF THESE PROGRAMMES THE PERSONS ACQUIRING OR
+C  USING THEM SATISFY THEMSELVES OF THEIR RELEVANCE AND ACCURACY FOR THE
+C  USES THEY HAVE IN MIND AND TAKE FULL RESPONSIBILITY FOR SUCH USE.
+C  ****   THE PROGRAMMES MAY  NOT  BE PASSED ON TO THIRD PARTIES   ****
+C
+C*******************************************************************************
+C*** ALL LOCAL ARRANGEMENTS OF FORMAT STATEMENTS AND OTHER LOCAL
+C INSTRUCTIONS WHICH INDIVIDUAL USERS MIGHT NEED TO CHANGE ARE
+C PRECEDED BY COMMENT CARDS BEGINNING WITH 'C***'
+C***********************************************************************
+      DIMENSION IP(15),FLBW(9,6),KPRT(72),PR(5)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      COMMON NDUMP(115),TDUMP(853)
+      COMMON /DIR/KD,KDP,INC,NDR,INDIR(54),KN(15),XKTT(15),FF(52)
+      DATA NN,E,IBLANK,ISIGA/16,.000000001,21*' '/
+      DATA PR/.25,.5,1.,2.,2./
+C INITIALISE DEFAULT RUN LENGTH AND PRECISION
+      RCI=12.
+      IGI=4
+      NEOF=1
+C*** LOCAL ARRANGEMENTS.  THE MINIMUM ITERATION INTERVAL
+C IS SET FOR USUAL DISPLAY PURPOSES TO 3.5 MIN.  IT CAN BE
+C CHANGED ONLY IN 'RESEARCH MODE' (MODE=0).  ESPECIALLY
+C WITH IV INJECTIONS THIS WILL GIVE SOME INSTABILITY AND
+C OCCASIONAL PROBLEMS.
+C THE PRECISION FACTOR 'PRECN' CAN BE RESET
+C IN THE RANGE 1 - 50 TO COMBAT NUMERICAL INSTABILITIES WHICH MAY
+C ARISE.
+C ITERATION INTERVALS(HRS) BY DEFAULT: MINIMUM=3.5 MTS., MAX=120 MTS.
+      TMIN=.058333334
+      TMAX=2.
+      PRECN=10.
+C
+C
+C INITIALISATION.
+C # DRUGS IN THE SYSTEM
+      NDMAX=0
+C*** SET INPUT AND OUTPUT FILE DEVICE NUMBERS
+      INI=5
+      KL=6
+      KT=6
+C SWITCH ON SUBSIDIARY OUTPUT ON UNIT 4(USED FOR SPOOLED HARDCOPY)
+C USER CAN SWITCH THIS OFF AND ON IN S/R DCNTRL
+      KA=4
+C*** ENSURE  NEW PAGE HARD COPY
+      WRITE(KA,333)
+333   FORMAT(1H1,'SPOOLED HARDCOPY FROM MACDOPE')
+      KD=3
+C***  ATTACH DISC FILE FOR STORED DRUG PARAMETERS
+C     ATTACH@50:1!=:15C
+C     ATTACH@1:49!='FILE FTN07=DRUGS,OLD;SHR'
+C     CALL DCOMMAND(ATTACH,I,J)
+C IN MACDOPEX ,DRUG PARAMETERS CAN BE HELD BOTH IN MEMORY AND ON DISC
+C FILE 7. THE DISC FILE IS SEARCHED FOIRST TO ALLOW NEW VERSIONS
+C TO BE DEVELOPED AND SAVED BETWEEN SESSIONS AT THE TERMINAL
+C COLLECT ANY DRUG DATA FROM DATA STATEMENTS IN SUBROUTINE DDRUGT
+      CALL DDRUGT(3,NOLD)
+C
+C
+C INTRODUCTORY DIALOGUE
+   10 WRITE (KT,20)
+   20 FORMAT (' --MACDOPEX--  VERSION 80.1 -- 2 JUNE 1980 --')
+      CALL DQUERY(NN)
+      NW2=0
+      CALL NXTWD (17,XX,MODE,0,2)
+      NPT=1
+      MD=2
+      IF (MODE-1) 30,60,40
+   30 NPT=21
+      IPLT=4
+      ISIG=0
+      GO TO 110
+   40 CALL DQUERY(MODE)
+      WRITE (KT,50)
+C*** LOCAL ARRANGEMENTS
+   50 FORMAT (' (PRESS *RETURN* TO CONTINUE)')
+      READ(INI,90) (K(I),I=1,72)
+      CALL DQUERY(12)
+   60 IPLT=1
+      IF (MODE-1) 70,70,150
+   70 WRITE (KT,80)
+   80 FORMAT (' TYPE YOUR NAME, FOR REFERENCE LATER WHEN SIGNING PRESCRI
+     XPTIONS',/,' ?')
+      READ (INI,90) (K(I),I=1,72)
+   90 FORMAT (72A1)
+      CALL DMXSCN(K,MD,NPT,FWRD)
+      IF (MD-3) 60,100,60
+  100 ISIG=FWRD
+  110 DO 130 L = 1,20
+      ISIGA(L)=IBLANK
+C  STORE SIGNATURE IN ARRAY ISIGA
+      IF (L-NPT) 120,130,130
+  120 ISIGA(L)=K(L)
+  130 CONTINUE
+  140 IF (MODE.GT.0) CALL DQUERY(MODE)
+C
+C
+C INITIALISE/RESTART
+  150 CALL DMINIT(NN)
+      CALL DCLIN(NN)
+      IF (NN.EQ.10) GO TO 210
+      CALL DPRESC
+C IF IN NOVICE MODE PROCEED TO RUN INTRODUCTORY SIMULATION
+      IF (MODE-1) 160,160,530
+  160 NW2=0
+C INTERACT FOR OPERATOR CONTROL
+  170 IF (NW2.GT.19) GO TO 190
+      NW2=0
+      WRITE (KT,180)
+C CENTRAL INTERACTIVE POINT FOR DIALOGUE
+  180 FORMAT (/' DO YOU WANT TO 1.CHANGE, 2.CONTINUE, 3.RESTART, 4.INSPE
+     XCT, 5.STOP')
+  190 CALL NXTWD(18,XX,NN,1,5)
+      GO TO (200,530,150,560,670), NN
+C
+C
+C CHANGE OPTION
+C AFTER ANY CHANGE SET ITERATION INTERVAL (TP) TO ITS MIN. VALUE
+  200 TP=TMIN
+      IF (NW2.GT.19) GO TO 230
+      NW2=0
+  210 WRITE (KT,220)
+C SECOND LEVEL FOR INTERACTIVE DIALOGUE
+  220 FORMAT (' 1.PRESCN, 2.TYPE OF RUN, 3.STORE/BKTR, 4.PATIENT FACTORS
+     X, 5.DRUG FACTORS')
+  230 CALL NXTWD(3,XX,NN,1,7)
+      GO TO (240,500,510,260,280,580,600), NN
+C CHANGE PRESC
+  240 WRITE (KL,250)
+  250 FORMAT (' *** CURRENT PRESCRIPTION(S) CANCELLED')
+C CLEAR OUT ANY RESIDUAL IVDRIPS
+      DO 255 I=1,6
+255   D(I,1)=0.
+      CALL DPRESC
+      GO TO 170
+C CHANGE PATIENT FACTORS
+  260 LIMIT=23
+      IF (NW2.GT.19) GO TO 320
+C PRINT PATIENT FACTORS
+      WRITE (KT,270) (FPPL(I),I=1,12)
+  270 FORMAT (
+     X/,' 1.GASTRIC EMPTYING RATE=',F3.2,' (1/HR)  2.GASTRIC PH=',F3.1
+     X,/,' 3.PLASMA ALBUMIN=',F4.1,'G/DL  4.PLASMA VOL=',F4.1,'L  5.BODY
+     XFAT=',F5.1,' KG',/,
+     X' 6.I/S SPACE=',F4.1,' L    7.I/C SPACE=',F4.1,' L    8.HEPATIC '
+     X,'FNCT=',F4.1,/,' 9.GFR=',F6.3,' L/HR    10.URINE PH=',F4.1,/,
+     X' 11.UR.OUTPT=',F6.3,' L/HR    12.RENAL TUB.FNCT=',F4.1)
+      NQ=9
+      GO TO 320
+C MODIFY DRUG PARAMETERS
+  280 NDN=1
+      IF (NDMAX-1) 610,300,290
+290   IF(NW2.GT.19) GOTO 295
+      WRITE (KT,640)
+      NW2=0
+295   CALL NXTWD(17,XXX,NDN,1,NDMAX)
+  300 LIMIT=52
+      IF (NW2.GT.19) GO TO 320
+C PRINT DRUG FACTORS
+      WRITE (KL,660) (NAME(NDN,J),J=1,15)
+      WRITE (KT,310) (FDPL(NDN,I),I=1,9)
+  310 FORMAT (' 1.PK=',F4.1,24X,'2.R.C.PARENT.ABSRPN=',F5.2,/,
+     X' 3.LIPID/WATER PARTN=',F4.1,9X,'4.R.C.PLASMA TO LIPID=',F5.2,/,
+     X' 5.CONC.RATIO I/C : PLASMA=',F5.2,'  6.R.C.PLASMA TO I/C=',F5.2,/
+     X' 7.R.C.INTEST.ABSRPN=',F7.2,6X,'8.FIRST PASS EFF.=',F6.2,/,
+     X' 9.RENAL TUBULAR PERMB.=',F7.1)
+      NQ=10
+C CHANGE OF (PATIENT OR DRUG) FACTORS
+  320 IF (NW2.GT.19) GO TO 340
+      WRITE (KT,330)
+  330 FORMAT (' TYPE THE NUMBERS OF FACTORS TO BE CHANGED -0 IF NONE')
+      NW2=0
+  340 NEOF=13
+      KYY=-1
+      JKL=1
+      NL=0
+  350 CALL NXTWD (NQ,XXX,NNN,0,LIMIT)
+      KYY=KYY+1
+      NW2=NW2+1
+      NL=NL+1
+      IF (JKL.EQ.0) GO TO 360
+      IF (NEOF.EQ.0) GO TO 370
+      IP(NL)=NNN
+      GO TO 350
+360   IP(NL)=NNN
+      KYY=KYY+1
+  370 DO 490 IJ = 1,KYY
+      I=IP(IJ)
+      IF (I.EQ.0) GO TO 170
+      IF (NW2.GT.19) GO TO 420
+      IF (NN-4) 380,380,390
+  380 WRITE (KT,400) I,FPPL(I)
+      GO TO 410
+  390 WRITE (KT,400) I,FDPL(NDN,I)
+  400 FORMAT (' FACTOR ',I2,' (CURRENTLY=',F9.3,' ), SPECIFY NEW VALUE')
+  410 NW2=0
+  420 CALL NXTWD (14,XXX,NNN,-500,15000)
+      IF(NNN.EQ.-999) GOTO 490
+      IF (XXX) 440,430,440
+  430 XXX=E
+  440 IF (NN-4) 450,450,460
+  450 YYY=FPPL(I)
+      FPPL(I)=XXX
+      GO TO 470
+  460 YYY=FDPL(NDN,I)
+      FDPL(NDN,I)=XXX
+  470 WRITE (KL,480) I,XXX,YYY
+  480 FORMAT (' FACTOR ',I2,'=',F9.3,' (PREVIOUSLY=',F9.3,')')
+      IF(KA.EQ.4) WRITE(KA,480) I,XXX,YYY
+  490 CONTINUE
+      GO TO 170
+C STORE/BACKTRACK
+  510 NN=1
+  520 CALL DDUMP (NN)
+      GO TO 170
+C
+C
+C MODIFY CONTROL PARAMETERS
+  500 CALL DCNTRL(PR)
+      GO TO 170
+C
+C
+C CONTINUE OPTION
+  530 CALL DMETAB(FLBW,KPRT,MFX,PR)
+      K(1)=IBLANK
+      IF (MODE-1) 170,170,540
+C AFTER NOVICE MODE INTRODUCTION CHANGE TO MODE 1 OPERATION
+  540 MODE=1
+      WRITE (KT,550)
+  550 FORMAT (/,' GET THE IDEA?  OK - WE*RE OFF.  ALL PRESCRIPTIONS ARE
+     XSIGNED, SO')
+      GO TO 70
+C
+C
+C INSPECT OPTION
+  560 XXX=0.
+      DO 568 I=1,NDMAX
+C TEST FOR PRESENCE OF DRUGS
+      IF (U(I,1)+U(I,7)) 570,568,570
+568   CONTINUE
+      GOTO 610
+  570 WRITE (KT,575)
+      IF(KA.EQ.4) WRITE(KA,575)
+  575 FORMAT (' CURRENT RESULTS (ALL DRUG CONCNS. IN MG/L)',
+     X//,' DRUG TOTAL   PROTEIN   STOMACH    INTES-   INTER-    INTRA-
+     X URINE',/,
+     X' NO.  PLASMA  BOUND(:)',14X,'TINE    STITIAL   CELL',
+     X'.    CONC.')
+      CALL DPRNTL(KPRT,72,FLBW,5)
+      WRITE(KT,576)
+      IF(KA.EQ.4) WRITE(KA,576)
+576   FORMAT(' UNDISSOLVED DRUG (MG) IN     DRUG ENTERING')
+      WRITE(KT,578)
+      IF(KA.EQ.4) WRITE(KA,578)
+ 578  FORMAT('  -STOMACH  -INTESTINE        LARGE INTESTINE (MG/HR)')
+      WRITE(KT,577) ((POOL1(I),POOL2(I),FLBW(9,I)),I=1,NDMAX)
+      IF(KA.EQ.4) WRITE(KA,577)((POOL1(I),POOL2(I),FLBW(9,I)),I=1,NDMAX)
+577   FORMAT(1X,T2,F8.3,T14,F8.3,T34,F8.3)
+      GO TO 170
+C
+C
+C OPTION 6 -LIST ALL PATIENT FACTORS
+  580 WRITE (KL,590) FPPL
+  590 FORMAT (1X,5F12.4)
+      GO TO 170
+C
+C
+C  OPTION 7 - LIST ALL DRUG FACTORS
+  600 NNN=1
+      IF (NDMAX-1) 610,650,630
+  610 WRITE (KT,620)
+  620 FORMAT (' NO DRUGS IN THE SYSTEM YET')
+      GO TO 170
+  630 WRITE (KT,640)
+  640 FORMAT (' SPECIFY DRUG NUMBER')
+      NW2=0
+      CALL NXTWD (17,XXX,NNN,1,NDMAX)
+  650 WRITE (KL,660) (NAME(NNN,J),J=1,15)
+      IF(KA.EQ.4) WRITE(KA,660) (NAME(NNN,J),J=1,15)
+  660 FORMAT (1X,15A1)
+      WRITE (KL,590) (FDPL(NNN,J),J=1,52)
+      IF(KA.EQ.4) WRITE(KA,590) (FDPL(NNN,J),J=1,52)
+      GO TO 170
+  670 WRITE (KT,680)
+680   FORMAT(' PLEASE TYPE YOUR NAME TO BE USED IN LABELLING OUTPUT')
+      READ(INI,90) (K(I),I=1,72)
+      IF(KA.EQ.4) WRITE(KA,685) (K(I),I=1,72)
+685   FORMAT(///1X,72A1//////////)
+      WRITE(KT,690)
+C*** LOCAL ARRANGEMENTS
+  690 FORMAT (' THANK YOU FOR YOUR INTEREST.  PLEASE LET',
+     X' YOUR TUTOR',/,
+     X' HAVE ANY COMMENTS, CRITICISMS OR SUGGESTIONS')
+      RETURN
+      END
+      SUBROUTINE DMETAB(FLBW,K,MFX,PR)
+      DIMENSION PR(5),IPX(6),FLBW(9,6),K(72)
+      INTEGER BLNK,STAR,POINT
+      DIMENSION NUMB(6),CGAST(6),TGAST(6),BETO(6),NTOX(6),BSAVE(6),
+     XALPU(6),ALPB(6),ALPG(6),ALPI(6),PRMT(5),YV(8),DERY(8),AUX(8,8),
+     XCIN(6),GFH(6),GSH(6),EH(6)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,ITRIG(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+C INITIALISE PLOTTING ARRAY
+      DATA IPX/3,14,18,3*0/
+      DATA NUMB/'1','2','3','4','5','6'/, BLNK,STAR,POINT/' ','*','.'/
+C FIND ALL DRUGS AND METABOLITES
+      DO 5 I=1,NDMAX
+      NMS(I)=FDPL(I,36)
+5     NMF(I)=FDPL(I,37)
+      CALL DSORT(NM,NMS)
+      CALL DSORT(NM,NMF)
+C INITIALISE UVOL
+      ISW=0
+C     DO 1 I=1,NPR
+C  1  WRITE (KT,2) I,(FDDT(I,J),J=1,9),IFIX(FDDT(I,10))
+C  2  FORMAT (1X,I2,4X,9F6.1,4X,A1)
+      IF (NDMAX) 10,10,30
+   10 WRITE (KT,20)
+   20 FORMAT (' YOU NEED TO HAVE PRESCRIBED SOME DRUG')
+      RETURN
+30    IF (IGI) 32,34,32
+32    PRTINT=AMIN1(PR(IGI),RCI)
+34    IAM=IPLT
+      DO 40 L = 1,NDMAX
+   40 UOLD(L)=UNEW(L)
+C  INITIALISE METABOLIC CALCULATIONS
+      ALPD=ALPHA(1,FPPL(2),2.5)
+      DO 50 L = 1,NDMAX
+      M=INT(FDPL(L,17))
+      ALPB(L)=ALPHA(M,FPPL(19),FDPL(L,1))
+      ALPU(L)=ALPHA(M,FPPL(10),FDPL(L,1))
+      ALPG(L)=ALPHA(M,FPPL(2),FDPL(L,1))
+C BASE INTESTINAL ABSORPTION ON 2 CHANNELS EQUIVALENT TO PH
+C FPPL(22) AND FDPL(22)+3
+      ALPI(L)=AMAX1(ALPHA(M,FPPL(22),FDPL(L,1)),ALPHA(M,FPPL(22)+1.5,
+     1 FDPL(L,1)),ALPHA(M,FPPL(22)+3.,FDPL(L,1)))
+   50 CIN(L)=1./(FPPL(9)*(1.-ALPU(L)))
+   60 IF (IPLT-4) 100,70,100
+   70 WRITE (KT,80) ((I,(NAME(I,L),L=1,15)),I=1,NDMAX)
+      IF(KA.EQ.4) WRITE(KA,80)((I,(NAME(I,L),L=1,15)),I=1,NDMAX)
+   80 FORMAT (1X,I1,'.',15A1)
+      WRITE (KL,90)
+      IF(KA.EQ.4) WRITE(KA,90)
+   90 FORMAT (18X,'PL.CONC.   BD.  STOM.  INTEST. INT.FL. I-C FL.  URINE
+     X')
+      GO TO 120
+  100 IF (ITRIG(1)-NUMB(2)) 120,110,120
+  110 CALL DAXES
+  120 RCIT=T+RCI
+      IF (T-TNEXT) 125,135,135
+125   DO 130 L = 1,72
+  130 K(L)=BLNK
+      DO 132 J=1,NDMAX
+      DO 131 I=1,8
+131   FLBW(I,J)=0.
+132   ULAST(J)=0.
+      VLAST=0.
+      MFX=15
+135   DO 140 L = 1,NDMAX
+  140 NTOX(L)=0
+C
+C
+C
+C FILL PRESCRIPTIONS
+150   CALL DPRSET(TPRESC,K,RCIT,PRTINT,CGAST,TGAST,FLBW,MFX,IAM)
+C++  DETERMINE PLASMA PROTEIN BINDING IN 2+STEP PROCESS FIRST STEP
+C CALCULATE AND STORE TOTAL DRUG BEFORE CALCULATING BETA
+      DO 392 J=1,NDMAX
+C AVOID 0/0 ON FIRST ENTRY
+      IF(BETN(J).EQ.0.) BETN(J)=.00000001
+C SAVE FREE RATIOS TO ALLOW DRUG CONSERVATION BELOW
+392   BSAVE(J)=BETN(J)
+      MFX=18
+      DO 420 I = 1,NDMAX
+      SUM=1.
+      DO 410 J = 1,NDMAX
+      IF (FDPL(I,38)-FDPL(J,38)) 410,400,410
+C INTRODUCE DRUG MOLECULAR WEIGHT (FACTOR 44)
+C MULTIPLY FACTOR 10 BY .001, AND 11 BY 1000 TO USE MICRO UNITS
+  400 SUM=SUM+U(J,1)*FDPL(J,11)*1000./FDPL(J,44)
+  410 CONTINUE
+      IND=IPX(INT(FDPL(I,38)))
+  420 BETO(I)=SUM/(SUM+FDPL(I,10)*FPPL(IND)*FDPL(I,11)*10.)
+C++  SECOND STEP 1.ORDER CHANGE WITH DOSE
+      DO 450 I = 1,NDMAX
+      BETN(I)=BETO(I)
+      DO 450 J = 1,NDMAX
+      IP=INT(FDPL(J,38))
+      IF (IP-INT(FDPL(I,38))) 450,430,450
+430   IF (FDPL(I,11)) 440,450,440
+440   BETN(I)=BETN(I)+D(J,2)*BETO(J)*(1-BETO(I))**2*FDPL(J,11)/
+     1 (FDPL(J,44)*FDPL(I,11)*FPPL(IPX(IP))*FPPL(4))
+  450 CONTINUE
+C NOW RECALCULATE FREE DRUG FROM TOTAL DRUG AND NEW VALUE BETA
+      DO 452 J=1,NDMAX
+C RECALCULATE FREE CONCENTRATIONS IN PLASMA AND LIVER
+      UNEW(J)=UNEW(J)*BETN(J)/BSAVE(J)
+452   U(J,5)=U(J,5)*BETN(J)/BSAVE(J)
+C
+C
+C
+C CALCULATE RATE OF CHANGE OF ENZYME INDUCTION FACTOR AND
+C DIURETIC FACTOR
+C++  SET INITIAL CONDITIONS FOR ITERATION
+      FRRF=0.
+      FRSF=0.
+      DIUF=1.
+      DELF=-(FLF-1)/200.
+C++  DECAY TIME CONSTANT FOR LIVER ENZYMEINDUCTION =200HRS
+      DO 480 I = 1,NDMAX
+      U(I,1)=UNEW(I)+D(I,2)*BETN(I)/FPPL(4)
+      U(I,4)=U(I,4)+D(I,3)*100.
+      RAT=U(I,1)/BETN(I)
+      DELF=DELF+FDPL(I,30)*RAT
+      FRRF=FRRF+FDPL(I,32)*RAT
+      FRSF=FRSF+FDPL(I,31)*RAT
+      DIUF=DIUF+FDPL(I,33)*RAT
+C
+C
+C DISSOLVE DRUG FROM SOLID PHASE;FIRST STAGE
+      CALL DISSO(U,POOL1,POOL2,RATE,FPPL,TP,SOL,I)
+      D(I,4)=SOL
+C TEST FOR SECOND SLOW PHASE DISSOLUTION
+      IF(FDPL(I,48).EQ.0.) GOTO 480
+      CALL DISSO(U,SP1,SP2,SR,FPPL,TP,SOL,I)
+      D(I,4)=D(I,4)+SOL
+  480 CONTINUE
+      FRRF=FPPL(17)/(1.+FRRF)
+      FRSF=FPPL(12)/(1.+FRSF)
+      CUPT=FPPL(11)*DIUF
+C  TOTAL URINE VOLUME
+      UVOL=UVOL+CUPT*TP
+CCCCC FCF=0.
+C CALCULATE ALL LIVER METABOLIC PROCESSES IN ACTION
+      CALL DLIVER(GFH,GSH,EH)
+C
+C
+C SOLVE EQUATIONS FOR EACH DRUG IN TURN
+  490 DO 770 J = 1,NDMAX
+C CALCULATE RATE OF INCREASE OF PLASMA CONCENTRATION OF FREE DRUG
+C FROM IV DRIP (IF ANY)
+      DRIP=D(J,1)*BETN(J)/FPPL(4)
+C ADJUST PRECISION OF R.K. SOLN,
+      PRMT(4)=FDPL(J,18)*.001/PRECN
+      ISW=0
+  500 CONTINUE
+C++  LIVER ENZYME SYSTEM
+CCCC  VH=FDPL(J,23)*FPPL(8)*FLF
+CCCC  CALL DENZ(GH,YH,VH,39,24,BETN,J)
+C++  RENAL REABSORPTIVE TRANSPORT SYSTEM
+      VRR=FDPL(J,28)*FRRF
+      CALL DENZ(GRR,YRR,VRR,41,29,CIN,J)
+C++  RENAL SECRETORY TRANSPORT SYSTEM
+      VRS=FDPL(J,26)*FRSF
+      CALL DENZ(GRS,YRS,VRS,40,27,BETN,J)
+      DEN=CUPT+ALPU(J)*FDPL(J,9)
+C++  TOTAL RENAL ZERO ORDER ELEMENT (GENERATOR)
+      GR=(GRS-GRR)*CUPT/DEN
+C++  TOTAL RENAL FIRST ORDER ELEMENT (CONDUCTANCE)
+      YR=(FPPL(9)+YRS-YRR+ALPB(J)*FDPL(J,9))*CUPT/DEN
+C++  TOTAL SYSTEM GENERATOR
+CCCC  FMLL=FLF*FDPL(J,25)*FPPL(8)/BETN(J)
+CCCC  G(1)=-GH-GR+FCF
+      G(1)=-GR
+C ARRANGE FOR METABOLITES TO BE LOST FROM PORTAL COMPARTMENT
+C OR CENTRAL COMPARTMENT CONDITIONAL ON DRUG PARAMETER 46
+      G(6)=(GFH(J)+GSH(J))
+      IF(FDPL(J,46).EQ.0) GOTO 501
+      G(1)=G(1)+G(6)
+      G(6)=0.
+C++  TOTAL SYSTEM CONDUCTANCE
+CCCC  Y1=YR+YH+FMLL
+CCCC CARRYOVER METABOLITE TO NEXT DRUG (DRUG COUPLING FACTOR)
+CCCC  FCF=U(J,1)*FMLL
+501   Y1=YR
+C
+C
+C  SET UP OUTPUT BUFFER OF KEY VARIABLES
+C++ TOTAL DRUG CONCENTRATION IN PLASMA
+  650 FLBW(1,J)=U(J,1)/BETN(J)
+C++ PERCENTAGE OF DRUG BOUND TO PROTEIN
+      FLBW(2,J)=(1.-BETN(J))*100.
+C++ DRUG CONCENTRATION IN STOMACH
+      FLBW(3,J)=U(J,2)
+C++ DRUG CONCENTRATION IN INTESTINE
+      FLBW(4,J)=U(J,3)
+C++ DRUG CONCENTRATION IN INTERSTITIAL COMPARTMENT
+      FLBW(5,J)=U(J,7)*FDPL(J,15)
+C++ DRUG CONCENTRATION IN INTRACELLULAR COMPARTMENT
+      FLBW(6,J)=U(J,8)*FDPL(J,5)
+C APPROXIMATE TREATMENT OF AMOUNT OF DRUG IN URINE
+      XX=U(J,1)*YR+GR
+      FLBW(8,J)=XX*TP+FLBW(8,J)
+      IF (UVOL) 660,660,655
+C++ URINARY CONCENTRATION MG/L
+655   FLBW(7,J)=(FLBW(8,J)-ULAST(J))/(UVOL-VLAST)
+C RATE OF TRANSFER INTO LARGE INTESTINE
+      FLBW(9,J)=FPPL(16)*U(J,3)
+C
+C
+C SET UP GRAPH BUFFER IF IN USE
+660   IF (TPRT.GT.TNEXT.AND.IGI.NE.0) GOTO 640
+      GO TO (520,540,530,640), IAM
+C++  TOTAL PLASMA CONCENTRATION
+  520 FGR=U(J,1)/BETN(J)
+      GO TO 550
+C++  URINARY CONCENTRATION
+  530 FGR=(GR+U(J,1)*YR)/CUPT
+      GO TO 550
+C++  UNBOUND PLASMA CONCENTRATION
+  540 FGR=U(J,1)
+C++  LOGARITHMIC DISPLAY
+  550 IF (FGR) 640,640,560
+  560 F=ALOG(FGR/FDPL(J,18))*8.69+38.5
+      IFX=IFIX(F)
+C++  SET LOWER AND UPPER DISPLAY MARGIN
+      IF (IFX-18) 640,640,570
+  570 IF (IFX-72) 590,590,580
+  580 IFX=72
+C++  CHECK IF POINT ALREADY OCCUPIED
+  590 IF (IFX-MFX) 610,610,600
+  600 MFX=IFX
+  610 IF (K(IFX)-BLNK) 630,620,630
+C++  NO, SET PT=DRUGNUMBER
+  620 K(IFX)=NUMB(J)
+      GO TO 640
+C++  YES, SET PT=*
+  630 K(IFX)=STAR
+640   K(19)=POINT
+C
+C
+C++  SETUP PARAMETERS FOR ITERATION
+C++  FAST PLASMA COMPARTMENT
+      C(1)=FPPL(4)/BETN(J)
+      TIN(1)=Y1/C(1)
+      G(1)=G(1)/C(1)
+C++  STOMACH
+      C(2)=CGAST(J)
+      TIN(2)=FDPL(J,21)*ALPB(J)
+      TIN(9)=FDPL(J,20)*ALPD
+      G(2)=(ALPG(J)-ALPB(J))*FDPL(J,21)
+C++  SMALL INTESTINE
+      C(3)=FPPL(13)
+      TIN(3)=FDPL(J,7)*ALPB(J)
+      G(3)=TGAST(J)
+      G(4)=FPPL(16)
+      G(5)=(ALPI(J)-ALPB(J))*FDPL(J,7)
+C++  PARENTERAL DEPOSIT
+      C(4)=.01
+      TIN(4)=FDPL(J,2)
+C++  SLOW PERFUSED COMPARTMENT
+      C(5)=FPPL(20)/BETN(J)
+      G(6)=G(6)/C(5)
+      TIN(5)=FPPL(23)
+C++  LIPID SPACE
+      C(6)=FPPL(5)*FDPL(J,3)
+      TIN(6)=FDPL(J,4)
+C++  EXTRAVASCULAR EXTRACELLULAR SPACE
+      C(7)=FPPL(6)*FDPL(J,15)
+      TIN(7)=FDPL(J,16)
+C++  INTRACELLULAR SPACE
+      C(8)=FPPL(7)*FDPL(J,5)
+      TIN(8)=FDPL(J,6)
+  670 PRMT(2)=TNEXT
+      PRMT(3)=(TNEXT-T)/2.
+      PRMT(1)=T
+C++  THIS SEQUENCE SETS UP THE EQUILIBRATION TRANSFORMATION
+      AM(1)=0.
+      DO 680 L = 1,7
+  680 AM(1)=AM(1)+TIN(L)*C(L)
+C++++++
+      AM(1)=AM(1)-TIN(3)*C(3)-TIN(2)*C(2)
+C------
+      AM(1)=AM(1)/C(1)
+      AM(2)=G(2)+G(3)+TIN(9)+TIN(2)
+      AM(3)=G(4)+G(5)+TIN(3)
+      AM(4)=TIN(4)
+C++++++
+      AM(5)=TIN(5)+TIN(3)*C(3)/C(5)+TIN(2)*C(2)/C(5)
+CC    AM(5)=TIN(5)
+      AM(6)=TIN(6)
+      AM(7)=TIN(7)+TIN(8)*C(8)/C(7)
+      AM(8)=TIN(8)
+C++++++
+CC    A12=(G(2)+TIN(2))*C(2)/C(1)
+      A52=(G(2)+TIN(2))*C(2)/C(5)
+CC    A13=(G(5)+TIN(3))*C(3)/C(1)
+      A53=(G(5)+TIN(3))*C(3)/C(5)
+C------
+      A14=TIN(4)*C(4)/C(1)
+      A15=TIN(5)*C(5)/C(1)
+      A16=TIN(6)*C(6)/C(1)
+      A17=TIN(7)*C(7)/C(1)
+C++++++
+CC    A21=TIN(2)
+      A25=TIN(2)
+CC    A31=TIN(3)
+      A35=TIN(3)
+C------
+      A32=G(3)*C(2)/C(3)
+      A71=TIN(7)
+      A78=TIN(8)*C(8)/C(7)
+      AL3=EH(J)/C(3)
+      DO 690 L = 1,8
+      DERY(L)=.125
+  690 YV(L)=U(J,L)
+      NDIM=8
+C++  CALL DRUNGE KUTTA SUBROUTINE
+  700 CALL DSOLVE(PRMT,YV,DERY,NDIM,IHLF,AUX)
+C++  TEST FOR PROPER CONVERSION
+      IF (IHLF-11) 750,710,740
+C++ NO CONVERSION AFTER 10 SUCCESSIVE ITERATIONS WITH GIVEN ERROR LIMITS
+  710 CONTINUE
+      IF (ISW) 740,720,740
+  720 ISW=1
+      WRITE (KT,730)
+C*** LOCAL ARRANGEMENTS
+  730 FORMAT (' TOO DIFFICULT  - YOUR DOSE IS PROBABLY TOO LARGE'/
+     1 ' TRY ADJUSTING PRECISION FACTOR IN *RUN CHANGE* SECTION')
+C++ OPTIONAL EXTRA LINES + USES MORE COMPUTER TIME
+C++ CONTINUE WITH 10 X LARGER ERROR LIMIT
+C++   PRMT(4)=PRMT(4)*10
+C++   GO TO 700
+      GO TO 980
+C++  ERROR IN INPUT PARAMETERS
+  740 STOP
+750   CONTINUE
+C END OF MAIN LOOP SOLVING MODEL EQUATIONS
+C
+C
+C NOW UPDATE MODEL VARIABLES ARRAY U
+      UNEW(J)=YV(1)
+      DO 760 L = 2,8
+  760 U(J,L)=YV(L)
+      IF(AL3.GT.0) TP=TMIN
+  770 CONTINUE
+C CALCULATE NEW VALUE OF ITERATION INTERVAL (TP)
+  800 RATIO=0.
+      DO 810 L = 1,NDMAX
+      RATIO=RATIO+ABS((UNEW(L)-UOLD(L))/(UOLD(L)+.00001))
+C     WRITE(KT,801) RATIO,TP,IHLF
+801   FORMAT(' RATIO,TP,IHLF',2F10.4,I10)
+      UOLD(L)=UNEW(L)
+  810 CONTINUE
+C NEW CALCN OF INTEGN. STEP. LINEAR CHANGE IN RANGE *2 TO *.5
+      IF(RATIO-.07) 820,840,840
+820   IF(RATIO-.01) 830,830,835
+830   FACT=2.
+      GOTO 850
+835   FACT=2.-25.*(RATIO-.01)
+      GOTO 850
+840   FACT=.5
+850   TP=TP*FACT
+      XX=RATIO*TP
+C     WRITE(KT,851) XX
+851   FORMAT(' RATIO*TP',F10.5)
+C     IF (RATIO-.05) 820,830,830
+      IF (TP.GT.TMAX) TP=TMAX
+      IF (TP.LT.TMIN) TP=TMIN
+C
+C
+C CHECK FOR TOXIC OR LETHAL LEVELS OF DRUG
+  860 DO 970 L = 1,NDMAX
+C++  TEST FOR LETHAL LEVEL
+      UTEST=UNEW(L)/BETN(L)
+      IF (FDPL(L,42)) 870,880,870
+  870 IL=FDPL(L,42)-2
+      UTEST=FLBW(IL,L)
+C CHECK SPECIFIED COMPARTMENT FOR TOXIC LEVEL
+  880 IF (UTEST-FDPL(L,22)) 970,890,890
+890   IF (NTOX(L)) 891,891,910
+891   NTOX(L)=1
+      WRITE (KT,960)  (XMSGT(L,J),J=1,15)
+      IF(KA.EQ.4) WRITE(KA,960) (XMSGT(L,J),J=1,15)
+  960 FORMAT (1X,15A4)
+C++  TEST FOR LETHAL REACTION
+  910 IF (UTEST-FDPL(L,19)) 970,940,940
+940   WRITE (KT,900)
+  900 FORMAT (' YOUR PATIENT JUST DIED. DO YOU HAVE A GOOD LAWYER?')
+      IF(KA.EQ.4) WRITE(KA,900)
+      GOTO 980
+970   CONTINUE
+C
+C
+C INTEGRATE ENZYME INDUCTION FACTOR RATE OF CHANGE
+C APPROXIMATELY. UPDATE CLOCK,CONTINUE OR EXIT
+      FLF=FLF+DELF*(TNEXT-T)
+      T=TNEXT
+      IF (RCIT-T) 980,980,150
+C END OF RUN
+  980 RETURN
+      END
+      SUBROUTINE DISSO(U,POOL1,POOL2,RATE,FPPL,TP,SOL,I)
+      DIMENSION POOL1(6),POOL2(6),RATE(6),FPPL(23),U(6,8)
+C DISSOLVE ORAL DRUG FROM SOLID PHASE AND DISTRIBUTE BETWEEN
+C STOMACH AND INTESTINE IN PROPN. TO AMOUNT SOLID DRUG IN EACH
+      TOTDR=POOL1(I)+POOL2(I)
+      IF(TOTDR.EQ.0.) RETURN
+C CALCULATE TOTAL DRUG DISSOLVED
+      SOL=AMIN1(RATE(I)*TP,TOTDR)
+C CALCULATE TOTAL DRUG DISSOLVED
+      QQ=POOL1(I)/TOTDR
+      XDIS=0.
+      YDIS=0.
+      IF(FPPL(21).NE.0.) XDIS=QQ*SOL
+      IF(FPPL(13).NE.0.)  YDIS=(1.-QQ)*SOL
+C CALCULATE NEW DISSOLVED DRUG CONCENTRATIONS
+      IF(FPPL(21).NE.0.) U(I,2)=U(I,2)+XDIS/FPPL(21)
+      IF(FPPL(13).NE.0.) U(I,3)=U(I,3)+YDIS/FPPL(13)
+      POOL1(I)=POOL1(I)-XDIS
+      POOL2(I)=POOL2(I)-YDIS
+C MOVE SOLID PHASE FROM STOMACH TO INTESTINE
+      XT=AMIN1(TP*FPPL(1)*POOL1(I),POOL1(I))
+      POOL2(I)=AMAX1(POOL2(I)+XT,0.)
+      POOL1(I)=AMAX1(POOL1(I)-XT,0.)
+      RETURN
+      END
+      SUBROUTINE DPRESC
+C
+C     THIS SUBROUTINE ACCEPTS PRESCRIPTIONS IN CONVENTIONAL
+C     LATIN AND TRANSLATES THIS INTO A PARAMETER TABLE.IN ADDITION
+C     THE PROGRAM KEEPS TRACK OF METABOLITES THE PT PRODUCES AND
+C     PHARMACOLOGICALLY ACTIVE METABOLITES OF PRESCRIBED DRUGS.
+C     IT HANDLES UP TO 4 DIFFERENT DRUGS AND 6 PRESCRIPTIONS
+C     SIMULTANEOUSLY.
+C
+      INTEGER STAR,INAM(15),LETR(5),IDUM(15)
+      DIMENSION ISW(3),IINI(72),ISAV(6)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      DATA STAR/1H*/, IBLANK/1H /,ITWO/1H2/
+      DATA LETR/'A','B','C','D','E'/
+C INSERT STARTING MODEL PRESRIPTION FOR NOVICE MODE
+      DATA IINI/'D','I','G','O','X','I','N',' ','1','.','0',' ','M',
+     X 'G',' ','P','O',' ','S','T','A','T',50*' '/
+C
+C   INITIALIZE FLOATING PRESCRIPTION TABLE FDDT
+C   FDDT(NPR,1)=DRUGNUMBER (1 TO 4)
+C   FDDT(NPR,2)=DRUG CODE NUMBER (-VE  )
+C   FDDT(NPR,3)=ROUTECODE, IV=1, IM=2, PO=3, AC=4, PC=5, IVDPIP=6,
+C   FDDT(NPR,4)=DOSE NUMBER CODE.QXHRS=0./D=1.BID=2.TID=3.QID=4.STAT=-1.
+C   FDDT(NPR,5)=TIME INTERVAL DELTA T BETWEEN ONE DOSE AND NEXT (HRS)
+C   FDDT(NPR,6)=STARTING TIME OF PRESCRIPTION,HRS
+C   FDDT(NPR,7)=TERMINATION TIME ,HRS,DEFAULT=3000 HRS
+C   FDDT(NPR,8)=TOTAL NUMBER OF DOSES,DEFAULT=3000
+C   FDDT(NPR,9)=DRUG DOSE IN MGR OR MGR PER HOUR FOR IV DRIP
+C   FDDT(NPR,10)=PRESC NO.(0,1,2..) FOR PRESCRIPTIONS ORDERS
+C
+      IF (MODE-1) 20,20,30
+20    WRITE (KT,60)ISIGA
+      GOTO 10
+ 30   DO 40 I=1,22
+40    K(I)=IINI(I)
+      DO 41 I=23,71
+41    K(I)=IBLANK
+      K(72)=ITWO
+   10 T1=T
+      DO 15 I=1,5
+15    FDDT(I,1)=0
+      NPR=0
+      INDX=0
+      MD=2
+      ID=1
+      NDC =0
+      T2=T
+      ND=NDMAX
+   60 FORMAT (' ENTER UP TO 5 PRESCRIPTIONS. END WITH SIGNATURE  '
+     X,20A1,/,'   (QUERIES? TYPE Q; FOR DRUGLIST TYPE QQ)')
+   70 L=NPR+1
+      IF(L.EQ.6) RETURN
+C SAVE LAST ACCEPTED DRUG NO. AND PRESCRIPTION NO.
+      NPOLD=NPR
+      NDOLD=ND
+C SET PARAMETER REQUIRED FOR SPECN. OF IVDRIP
+      IDRP=0
+C INITIALIZE PARAMETERS FOR THE NEXT PRESCRIPTION
+      CALL DPINIT(FDDT,L)
+      INDX=INDX+1
+      IF (MODE-1) 90,90,130
+   90 WRITE (KT,100) LETR(INDX)
+  100 FORMAT (' PRESC# ',A1,'.. ')
+  110 READ (INI,120) (K(I),I=1,72)
+  120 FORMAT (72A1)
+  130 MD=2
+      DO 132 I=1,3
+  132 ISW(I)=0
+      ID=1
+      NPT=1
+C SCAN OR CONTINUE SCANNING PRESCRIPTION LINE
+140   CALL DMXSCN(K,MD,NPT,FWRD)
+      IFWD=IFIX(FWRD)
+      NT=NPT-1
+      GO TO (140,440,510,560,560,150), MD
+C    END OF LINE
+C    CHECK FOR COMPLETENESS
+C    WHEN COMPLETE ,PICK UP METABOLITES
+  150 IF (ISW(1)*ISW(2)*ISW(3)) 170,160,170
+  160 WRITE (KT,162)
+  162 FORMAT (' PRESCRIPTION WRONG OR INCOMPLETE - TYPE *Q* FOR HELP')
+      GO TO 560
+C
+C
+C
+C PRESCRIPTION COMPLETE
+  170 ID=0
+      MD=0
+      IF(KA.EQ.4)WRITE (KA,180) (K(I),I=1,NPT)
+  180 FORMAT (12X,59A1)
+C TEST FOR MAXIMUM RECOMMENDED DOSE FOR THIS SUBJECT
+  190 DF=FDPL(ND1,13)*FPPL(15)
+      IF (FDDT(NPR,9)-DF) 230,230,200
+  200 WRITE (KT,210) DF
+  210 FORMAT (' YOUR DOSE EXCEEDS THE RECOMMENDED MAXIMUM OF ',F7.2,
+     X' MG')
+      WRITE (KT,220)
+  220 FORMAT (' BUT I WILL ACCEPT IT - UNLESS YOU TYPE *CANCEL* NOW')
+  230 IAM=IFIX(FDDT(NPR,3))+1
+      GO TO (160,270,270,240,240,240,270,270), IAM
+C  PO, AC, PC (ORAL)
+  240 RT=1.
+      IF(AMOD(FDDT(NPR,9),FDPL(ND1,14)).EQ.0.) GOTO 280
+C INHIBIT PRINT IN RESEARCH MODE.
+250   CONTINUE
+      IF(MODE.EQ.0) GOTO 280
+      DF=FDPL(ND1,14)
+      WRITE (KT,260) FDDT(NPR,9), DF
+  260 FORMAT (1X,F6.3,' MG IS NON-STANDARD DOSE - USUAL TABLETS  ',
+     X/' ARE MULTIPLES OF ', F8.3,' MG')
+      GO TO 280
+C IV, IM, IVDRIP (PARENTERAL)
+  270 RT=2.
+C CHECK IF ROUTE IS VALID FOR THIS DRUG
+  280 DF=FDPL(ND1,12)
+      IF (DF*(DF-RT)) 290,310,290
+  290 WRITE (KT,300)
+  300 FORMAT (' NO SUCH PREPARATION AVAILABLE')
+      WRITE (KT,220)
+  310 IF (FDDT(NPR,4)+FDDT(NPR,5)) 320,160,320
+C    ADJUST DOSETIME TO NURSES SCHEDULE,FIXPOINT 8AM.
+  320 CALL DTDAY(FDDT(NPR,6),IDAY,ID)
+      IF (FDDT(NPR,4)) 430,380,330
+  330 IF (FDDT(NPR,4)-1) 350,340,350
+  340 FDDT(NPR,5)=24.
+      GO TO 360
+  350 FDDT(NPR,5)=12./(FDDT(NPR,4)-1.)
+  360 FDEL=24./FDDT(NPR,4)
+      IF (IDAY) 390,370,390
+  370 FDDT(NPR,6)=(ID+1)*24.
+      GO TO 400
+  380 FDEL=FDDT(NPR,5)
+  390 FN=FDDT(NPR,6)/FDDT(NPR,5)
+      IFN=IFIX(FN)
+      IF(FDDT(NPR,6).NE.0.) FDDT(NPR,6)=(IFN+1)*FDDT(NPR,5)
+  400 IF (FDDT(NPR,7)-3000.) 430,410,410
+  410 IF (FDDT(NPR,8)-3000.) 420,430,430
+  420 FDDT(NPR,7)=FDDT(NPR,6)+FDEL*(FDDT(NPR,8))-0.01
+  430 FDDT(NPR,10)=INDX
+C IF IVDRIP SET END OF PRESCRIPTION FROM 'FOR' PARAMETER IN PRESCRIPTION
+      IF (FDDT(NPR,3)-6) 439,431,439
+431   FDDT(NPR,7)=FDDT(NPR,6)+FDDT(NPR,7)
+C COMPLETE PRESCRIPTION HAS BEEN PROCESSED .
+C LOAD METABOLITES IF ANY
+439   GOTO 800
+C
+C
+C
+C    RECORD NUMERIC
+  440 IF (ID) 450,490,450
+  450 FDDT(NPR,ID)=FWRD
+      IF(ID-8) 140,455,140
+C WHERE SPECIFYING DRIP RATE HAVE NOW GOT NECESSARY TIMING INFORMATION
+455   ISW(3)=1
+      GOTO 140
+C    NUMBER=DOSE
+  490 FDDT(NPR,9)=FWRD
+      ISW(1)=1
+      FDDT(NPR,1)=ND1
+      FDDT(NPR,2)=NDC
+      FDDT(NPR,6)=T1
+      T1=T
+      ID=3
+      MD=4
+      GO TO 140
+C
+C
+C
+C    RECORD ALPHABETIC
+C IF DRUG NAME KNOWN , DON'T SEARCH FOR ITEMS ALWAYS FIRST
+C IN LINE
+510   IF(ISW(1)) 890,520,890
+C  CHECK 'QQ'
+  520 IF (IFWD+48) 540,530,540
+C  OBTAIN LIST OF DRUGS
+  530 CALL DDRUGT(2,NDC)
+C LIST DRUGS ON FILE
+      CALL DRWDR(3,IFWD,IFWD)
+      GO TO 90
+C  CHECK 'CANCEL'
+  540 IF (IFWD+236) 600,560,600
+C    DELETE.IF INCOMPLETE TABLE,NPR+1,INITIALIZE.
+  560 INDX=INDX-1
+      WRITE (KT,561)
+561   FORMAT (' PRESCRIPTION DELETED--TRY AGAIN')
+      IF (INDX) 10,10,570
+  570 NPR=NPOLD
+      ND=NDOLD
+      ID=1
+      MD=2
+      IF (NPR-1) 10,590,590
+  590 ND1=IFIX(FDDT(NPR,1))
+      NDC=IFIX(FDDT(NPR,2))
+      GO TO 70
+C  REENTER PRESCRIPTION INDX
+C
+C
+C CHECK SIGNATURE
+  600 IF (IFWD-ISIG) 650,610,650
+C BLANK LINE (FWRD=0) TREATED AS SIGNATURE IN RESEARCH MODE
+  610 IF (MODE) 620,640,620
+C    ALPHA WORD = SIGNATURE
+  620 DO 630 L = 1,NT
+      IF (K(L)-ISIGA(L)) 650,630,650
+  630 CONTINUE
+C VALID SIGNATURE
+640   GOTO 1135
+C
+C
+C  CHECK 'THEN'
+  650 IF (IFWD+123) 670,660,670
+C    ALPHA WORD = THEN
+  660 T1=FDDT(NPR,7)
+      ID=0
+      MD=0
+      GO TO 140
+C
+C NEW PRESCRIPTION COMING UP -IS THERE ROOM
+C CHECK BLANK LINE
+670   IF(IFWD) 673,560,673
+  673 IF (NPR-5) 680,680,671
+C    NPR ALREADY 5
+  671 WRITE (KT,672)
+  672 FORMAT (' TOO MANY PRESCRIPTIONS TO HANDLE -LIMIT=5')
+      GOTO 90
+C
+C
+C
+C LOAD DRUG IFWD IF POSSIBLE
+C N.B. DEALING WITH PRESCRIBED DRUG ,NOT METABOLITES HERE
+680   CALL DLDDRG(IFWD,IR)
+C CODE -1 NOT FOUND, 0 TOO MANY DRUGS ,+VE DRUG SEQUENCE NO.
+      IF(IR)  90,685,690
+C IF UNABLE TO FIND DRUG OR TOO MANY DRUGS ALLOW
+C FURTHER PRESCRIPTION INDX
+685   WRITE(KT,686)
+686   FORMAT(' TOO MANY DRUGS (OR METABOLITES) -LIMIT=6')
+      GO TO 90
+C
+C
+C DRUG SUCCESSFULLY LOADED (ND1=SEQ.NO. ,NDC=CODE)
+690   ND1=IR
+      NDC=IFWD
+      MD=3
+      ID=0
+C UPDATE NO. PRESCRIPTIONS AND STORE DRUG INFO. IN THESE
+      NPR=NPR+1
+      FDDT(NPR,1)=ND1
+      FDDT(NPR,2)=NDC
+      NDMAX=ND
+      GO TO 140
+C  CONTINUE SCANNING PRESCRIPTION HAVING LOADED DRUG
+C
+C
+C
+C ON RECEIPT OF VALID PRESCRIPTION LOAD ALL METABOLITES
+C IF NO METABOLITES GET ANOTHER PRESCRIPTION
+C LOAD METABOLITES FROM TREE GENERATED FROM FDPL(,36) AND (,37)
+C  INITIALISE STACK
+800   I=1
+       J=1
+802   IFWD=IFIX(FDPL(ND1,37))
+C STACK AWAY SUB-TREE NODES TO BE LOADED LATER
+      IF(I.EQ.6)  GOTO 880
+      IF(FDPL(ND1,36).EQ.0.) GOTO 805
+      ISAV(I)=IFIX(FDPL(ND1,36))
+      I=I+1
+805   IF(IFWD) 815,820,815
+815   CALL DLDDRG(IFWD,IR)
+C IF METABOLITE CANNOT BE LOADED ,ERASE DRUG AND PRESCRIPTION TABLE
+C SINCE LAST SUCCESSFULLY COMPLETED PRESCRIPTION
+      IF(IR.LT.0) GOTO 880
+C NO PRESC. TABLE ENTRY FOR METABOLITE
+817   ND1=IR
+      NDC=IFWD
+      GO TO 802
+C
+C
+C LOAD SUBTREE STARTING FROM STACKED NODE
+820   IF(J.EQ.I) GOTO 850
+      IFWD=ISAV(J)
+      J=J+1
+C LOAD DRUG THEN REST OF SUBTREE AS BEFORE
+      GOTO 815
+C
+C HERE WHEN HAVE LOADED DRUG AND ALL METABOLITES
+C SKIP SIGNATURE FIRST TIME AROUND
+  850 NDMAX=ND
+      IF(MODE-1) 70,70,1140
+C  HERE IF UNABLE TO LOAD METABOLITE
+880   WRITE(KT,881)
+881   FORMAT(' UNABLE TO LOAD DRUG')
+       GOTO 560
+C
+C
+C
+C
+C
+C
+C   PROCESS ALPHABETIC AFTER DRUG NAME KNOWN
+  890 CALL DITDNC(IFWD,M)
+      IF (100-M) 560,560,900
+C CODES ARE:
+C   1=Q, 2=FOR, 3=TIMES, 4=MIN, 5=HRS, 6=DAYS, 7=WEEKS,
+C   8=GRAMS, 9=MG, 10=MICROGRAM, 11=UNITS,
+C   12=OD, 13=BID, 14=TID, 15=QID, 16=IV, 17=IM, 18=PO, 19=BM,
+C   20=AM, STAT, 22=CANCEL, 23=IVDRIP
+900   GO TO (910,920,930,940,950,960,970,1020,1030,1040,1050,1070,1070,1
+     X070,1070,1120,1120,1120,1110,1110,1080,560,1090,1090), M
+C    Q TIME
+  910 ID=5
+      MD=3
+      GO TO 140
+C    FOR TIME
+C IF FIND 'PER' BEFORE DRUG ROUTE SPECIFIED PREPARE FOR IVDRIP
+920   IF (FDDT(NPR,3)) 925,921,925
+921   IDRP=2
+      MD=4
+      GOTO 926
+925   MD=3
+926   ID=7+IDRP
+      GO TO 140
+C    TIMES
+  930 ID=8
+      MD=3
+      GO TO 140
+C    MINUTES
+  940 FAC=1./60.
+      GO TO 980
+C    HOURS
+  950 FAC=1.
+      GO TO 980
+C  DAYS
+  960 FAC=24.
+      GO TO 980
+C    WEEKS
+  970 FAC=168.
+C ALL TIME UNITS PASS THROUGH HERE
+  980 MD=4
+      IF ((ID-5)*(ID-7)) 995,990,995
+  990 FDDT(NPR,ID)=FDDT(NPR,ID)*FAC
+      ISW(3)=1
+      GOTO 140
+995   IF (ID-9) 1000,996,1000
+C  SET DRIP RATE
+996   FDDT(NPR,ID)=FDDT(NPR,ID)/FAC
+C IN CASE OF IVDRIP ADJUST DOSE UNITS TO TAKE ACCOUNT OF SPEC. RATE
+      GO TO 140
+ 1000 WRITE (KT,1010)
+ 1010 FORMAT ( 1X,' ERROR; INVALID TIME UNIT')
+      GO TO 560
+C  GRAMS
+ 1020 FAC=1000.
+      GO TO 1060
+C    MILLIGRAMS
+ 1030 FAC=1.
+      GO TO 1060
+C    MICROGRAMS
+ 1040 FAC=.001
+      GO TO 1060
+C    INTERNATIONAL UNITS
+ 1050 FAC=1.
+ 1060 MD=4
+      FDDT(NPR,9)=FAC*FDDT(NPR,9)
+      IF (ID-3) 1000,140,1000
+C    OD,BID,QID,TID
+ 1070 MD=4
+      FDDT(NPR,4)=M-11
+      GO TO 1082
+C    STAT
+ 1080 MD=4
+      FDDT(NPR,4)=-1.
+      FDDT(NPR,8)=1.
+      FDDT(NPR,5)=0.
+C SIGNAL FREQUENCY SPECIFICATION
+1082  ISW(3)=1
+      GO TO 140
+C ROUTE=IVDRIP
+1090  IDRP=0
+      FDDT(NPR,3)=6
+C TREAT AS STAT DOSE FOR THE PRESENT- RATE IS PER HOUR BY DEFAULT
+      FDDT(NPR,4)=-1
+C TELL SYSTEM FREQUENCY O.K.
+      ISW(3)=1
+      FDDT(NPR,5)=3000.
+C ALLOW IVDRIP TO PROCEED EFFECTIVELY FOR INDEFINITE PERIOD
+C UNLESS COUNTERMANDED BY 'FOR TIME' SPECIFICATION
+      FDDT(NPR,7)=3000.
+      GOTO 1130
+C ROUTE - IV,IM,PO,CM,AC,AM,PC
+ 1110 IF (FDDT(NPR,3)*(FDDT(NPR,3)-3)) 1130,1120,1130
+ 1120 FDDT(NPR,3)=M-15
+ 1130 MD=4
+      IF (IDRP) 1000,1131,1000
+1131  ISW(2)=1
+      GO TO 140
+1135  NDMAX=ND
+ 1140 NPT=1
+      K(1)=ITWO
+C SET UP ARRAY OF DRUGS IN SYSTEM DRUGS IN SYSTEM
+      DO 1150 I=1,NDMAX
+1150  NM(I)=IFIX(FDPL(I,52))
+      RETURN
+      END
+      SUBROUTINE DPRSET(TPRESC,K,RCIT,PRTINT,CGAST,TGAST,FLBW,MFX,IAM)
+      DIMENSION LETR(6),K(72),FLBW(9,6),CGAST(6),TGAST(6)
+      INTEGER BLNK
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,ITRIG(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      DATA LETR/' ','A','B','C','D','E'/
+      DATA BLNK/' '/
+C++ ZEROSET DOSE ARRAY
+C++ D(L,1)=CONTINUOUS INFUSION DOSE (MG PER MINUTE)
+C++ D(L,2)=INTRAVENOUS DOSE
+C++ D(L,3)=IM OR SC DOSE
+C++ D(L,4)=ORAL DOSE
+      DO 180 L = 1,NDMAX
+C CLEAR ALL BUT IVDRIP DOSE
+      DO 170 M = 2,4
+  170 D(L,M)=0.
+      CGAST(L)=FPPL(21)
+  180 TGAST(L)=FPPL(1)
+      TPRESC=RCIT
+C FILL PRESCRIPTIONS
+      DO 360 N = 1,NPR
+      M=IFIX(FDDT(N,1))
+      IF (M) 190,360,190
+  190 IM=IFIX(FDDT(N,3))
+      IF (FDDT(N,6)-TPRESC) 200,210,210
+  200 TPRESC=FDDT(N,6)
+C SWITCH OFF IVDRIP IF NECESSARY
+  210 IF (T-FDDT(N,6)) 355,220,220
+  220 GO TO (230,240,260,260,250,280,240,290), IM
+C++  ONE SHOT INTRAVENOUS INJECTION
+  230 D(M,2)=D(M,2)+FDDT(N,9)
+      GO TO 290
+C++  IM INJECTION
+  240 D(M,3)=D(M,3)+FDDT(N,9)
+      GO TO 290
+C++  PC PRESCRIPTION
+  250 TGAST(M)=FPPL(1)/3.
+      CGAST(M)=FPPL(21)*3.
+  260 CONTINUE
+C TRANSFER ORAL DRUG INTO SOLID PHASE COMPT.PROPORTION FDPL(M,48)
+C GASTRIC AND INTESTINAL SOLID PHASE ARE DEFINED (POOL1 AND POOL2)
+C RATE OF DISSOLUTION IS DEFINED BY THE SUM OF THESE AND FPPL(34)
+C SOLID PHASE MOVES BETWEEN THE TWO IN PROPN. TO GASTRIC EMPTYING RATE
+C IF GASTRIC VOLUME ZERO, TRANSFER DRUG STRAIGHT TO INTESTINE
+C ADD SLOW SOLID PHASE DEFINED BY SP1,SP2,SR AND FDPL(,47)
+270   F1=FDDT(N,9)*FDPL(M,8)
+      F2=FDPL(M,48)
+      IF(FPPL(21)) 271,272,271
+271   POOL1(M)=POOL1(M)+F1*(1-F2)
+      IF(F2.NE.0.) SP1(M)=SP1(M)+F1*F2
+      GOTO 273
+272   POOL2(M)=POOL2(M)+F1*(1.-F2)
+      IF(F2.NE.0.) SP2(M)=SP2(M)+F1*F2
+C DEFINE NEW RATE OF DISSOLUTION
+273   RATE(M)=(POOL1(M)+POOL2(M))/AMAX1(FDPL(M,34),.001)
+      IF(F2.NE.0.) SR(M)=(SP1(M)+SP2(M))/AMAX1(FDPL(M,47),.001)
+C OF DRUG ENTERING
+      GOTO 290
+  280 D(M,1)=D(M,1)+FDDT(N,9)
+C  SET TIME FOR NEXT DOSE
+  290 FDDT(N,6)=FDDT(N,6)+FDDT(N,5)
+      CALL DTDAY(FDDT(N,6),IDAY,ID)
+C  RESET ITERATION INTERVAL TP TO MIN. VALUE FOR NEXT CALCULATIONS
+      TP=TMIN
+      K(N)=LETR(IFIX(FDDT(N,10))+1)
+C++  TEST TO SEE WHEN THIS PRESCRIPTION HAS TO BE FILLED NEXT TIME
+      IF (FDDT(N,4)) 350,340,320
+C++  TEST IF DAY OR NIGHT
+  320 IF (IDAY) 340,330,340
+C++  NIGHT TIME NEXT DOSE AT 8AM
+  330 FDDT(N,6)=(ID+1)*24.
+C++  DAYTIME QR Q X HRS.NEXT DOSE REGULAR
+C++  TEST IF PRESCRIPTION EXPIRED
+  340 IF (FDDT(N,6)-FDDT(N,7)) 360,360,350
+C++  PRESCRIPTION EXPIRED SET NEXT DOSE AT 3000 HRS.
+  350 FDDT(N,6)=3000.
+      GOTO 360
+C CLEAR DRUG AMOUNT TO ENSURE IV DRIP TURNED OFF
+355   IF (IM-6) 360,356,360
+356   IF (T-FDDT(N,7)) 360,357,357
+357   D(M,1)=D(M,1)-FDDT(N,9)
+      FDDT(N,9)=0.
+C++  TEST IF NEXT DOSE TO BE GIVEN BEFORE TIME INCREMENT
+  360 CONTINUE
+      TNEXT=T+TP
+C         WITH CODES OF PRESCRIPTIONS TO BE EXECUTED IN ITERATION
+C         THAT FOLLOWS
+      IF (T.LT.TPRT.AND.IGI.NE.0) GOTO 395
+      IF (IGI.EQ.0) PRTINT=TP
+      CALL DPRNTL(K,MFX,FLBW,IAM)
+      TPRT=TPRT+PRTINT
+      DO 394 I=1,72
+394   K(I)=BLNK
+C        AVERAGING OVER NEXT PRINT INTERVAL
+      VLAST=UVOL
+      DO 393 I=1,NDMAX
+393   ULAST(I)=FLBW(8,I)
+395   CONTINUE
+      RETURN
+      END
+      SUBROUTINE DPINIT(FDDT,L)
+C INITIALISE PRESCRIPTION
+      DIMENSION FDDT(5,10)
+      DO 1 I=1,5
+1     FDDT(L,I)=0.
+      DO 2 I=6,8
+2     FDDT(L,I)=3000.
+      FDDT(L,9)=0.
+      FDDT(L,10)=0.
+      RETURN
+      END
+      FUNCTION ALPHA(IAB,PH,PK)
+C THIS FUNCTION CALCULATES THE PERCENTAGE OF UNIONIZED DRUG
+C IAB=1,DRUG ACID .IAB=0,DRUG BASE.
+      R=10.**(-PK+PH)
+      X=1./(1.+R)
+      IF (IAB) 20,10,20
+   10 X=1.-X
+   20 ALPHA=X
+      RETURN
+      END
+      SUBROUTINE DAXES
+C SET-UP AND PRINT AXES AND LOG. SCALE FOR CURRENT DRUGS IN THE SYSTEM.
+C
+      DIMENSION KY(71),KX(71),TITLE(5,6)
+      INTEGER BLNK,MINUS,LETRI,POINT,ZERO,ONE
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      DATA BLNK,MINUS,LETRI,POINT,ZERO,ONE/' ','-','I','.','0','1'/
+C  DATA FOR TITLE OF THE GRAPH
+      DATA TITLE/ 'PLAS','MA D','RUG(','TOTA','L)  ',
+     X'PLAS','MA D','RUG ','(FRE','E)  ',
+     X 'URIN','ARY ','CONC','.   ','    ',15*'    '/
+      DO 130 N = 1,NDMAX
+      DO 30 L = 1,71
+      KY(L)=BLNK
+      IF (L-18) 20,10,10
+   10 KX(L)=MINUS
+      GO TO 30
+   20 KX(L)=BLNK
+   30 CONTINUE
+      S=.0001
+      NCT=4
+   40 F=ALOG(S/FDPL(N,18))*8.69+38.5
+      IFX=IFIX(F)
+      NS=IFX+NCT
+      IF (IFX-71) 50,110,110
+   50 IF (IFX-18) 90,90,60
+   60 DO 70 L = IFX,NS
+   70 KY(L)=ZERO
+      DO 80 L = NS,IFX
+   80 KY(L)=ZERO
+      KY(IFX)=POINT
+      KY(NS)=ONE
+      KX(IFX)=LETRI
+   90 S=10.*S
+      NCT=NCT-1
+      IF (NCT) 40,100,40
+  100 NCT=-1
+      GO TO 40
+  110 WRITE (KT,120) N,(NAME(N,J),J=1,15),(KY(J),J=18,71)
+      IF(KA.EQ.4) WRITE(KA,120) N,(NAME(N,J),J=1,15),(KY(J),J=18,71)
+  120 FORMAT (1X,I1,'.',69A1)
+      WRITE (KT,121) KX
+      IF(KA.EQ.4) WRITE(KA,121) KX
+121   FORMAT (1X,71A1)
+  130 CONTINUE
+      WRITE (KT,140) (TITLE(L,IPLT),L=1,5)
+      IF(KA.EQ.4) WRITE(KA,140) (TITLE(L,IPLT),L=1,5)
+  140 FORMAT (1H ,'PRESC# DAY   HRS .',12X,5A4,' (MG/L) -->')
+      RETURN
+      END
+      SUBROUTINE DCLIN(NN)
+C     CHARACTER GENDER(6,2)
+      DIMENSION GENDER(6,2)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      DATA GENDER/'M','A','L','E',' ',' ','F','E','M','A','L','E'/
+      IF (MODE-1) 10,10,40
+   10 IF (NW2.GT.19) GO TO 30
+      NW2=0
+      WRITE (KT,20)
+   20 FORMAT (' DO YOU WANT..1.NORMAL YOUNG ADULT MALE VOLUNTEER,',/,' 2
+     X.PRESET SUBJECTS, 3.TO SPECIFY YOUR OWN PATIENTS OR SUBJECTS')
+   30 CALL NXTWD(17,XX,NN,1,3)
+      GO TO (40,160,50), NN
+C NORMAL 70 KG 25+YR MALE VOLUNTEER
+   40 ISEX=1
+      HT=180.
+      WT=70.
+      AGE=25.
+      CALL DPATIE(AGE,ISEX,WT,HT)
+      IF(KA.EQ.4) WRITE(KA,151) (GENDER(I,ISEX),I=1,6),AGE,HT,WT
+151   FORMAT(' SET UP ',6A1,'  AGED  ',F3.0,' YR. ,',F3.0,' CM. ',
+     1 F3.0,' KG.')
+      GO TO 250
+C SPECIFY SUBJECT BY AGE,SEX ETC.
+   50 IF (NW2.GT.19) GO TO 70
+      NW2=0
+      WRITE (KT,60)
+   60 FORMAT (' PLEASE SPECIFY..1.MALE, 2.FEMALE')
+   70 CALL NXTWD(17,XX,ISEX,1,2)
+   80 IF (NW2.GT.19) GO TO 100
+      NW2=0
+      WRITE (KT,90)
+   90 FORMAT (' GIVE ME THE HEIGHT IN CM (183 CM=6 FT)')
+  100 CALL NXTWD(17,HT,NN,15,200)
+  110 IF (NW2.GT.19) GO TO 130
+      NW2=0
+      WRITE (KT,120)
+  120 FORMAT (' NOW WEIGHT IN KG')
+  130 CALL NXTWD(17,WT,NN,1,150)
+      IF (NW2.GT.19) GO TO 150
+      NW2=0
+      WRITE (KT,140)
+  140 FORMAT (' AND AGE IN YEARS')
+  150 CALL NXTWD(17,AGE,NN,0,100)
+      IF (AGE.LT..05) AGE=.05
+      CALL DPATIE(AGE,ISEX,WT,HT)
+      NN=10
+      GO TO 250
+C PRESET SUBJECTS
+  160 IF (NW2.GT.19) GO TO 180
+      NW2=0
+      WRITE (KT,170)
+  170 FORMAT (' SELECT ONE OF THE FOLLOWING SUBJECTS BY NUMBER',/,
+     X' 1.ONE MONTH OLD INFANT,       2.LITTLE GIRL (3 YEARS)',/,
+     X' 3.VOLUPTUOUS FEMALE (25 YRS), 4.HOCKEY HERO (MALE)',/,
+     X' 5.OCTAGENARIAN WITH SEVERE WASTING',/,
+     X' 6.FIFTY YEAR OLD FEMALE IN RENAL FAILURE')
+  180 CALL NXTWD(17,XX,NN,1,6)
+      IF(KA.EQ.4) WRITE(KA,181) NN
+181   FORMAT(' PRESET SUBJECT ',I2)
+      GO TO (190,200,210,220,230,240), NN
+C+++ INFANT, AGE=1 MO., SEX=M, WT=4.5, HT=25
+  190 CALL DPATIE(0.83,1,4.5,25.)
+      GO TO 250
+C+++ LITTLE GIRL, AGE=3 YRS, SEX=F, WT=14, HT=94
+  200 CALL DPATIE(3.,2,14.,94.)
+      GO TO 250
+C+++ VOLUPTUOS FEMALE AGE=25, SEX=F, WT=59, HT=173
+  210 CALL DPATIE(25.,2,59.,173.)
+      GO TO 250
+C+++ HOCKEY HERO AGE=25, SEX=M, WT=80, HT=185
+  220 CALL DPATIE(25.,1,80.,185.)
+      GO TO 250
+C+++ OCTAGENARIAN AGE=80, SEX=M (IMMATERIAL), WT=44.3, HT=175
+  230 CALL DPATIE(80.,1,44.3,175.)
+      GO TO 250
+C+++ 50+YR OLD FEMALE IN RENAL FAILURE
+  240 CALL DPATIE(50.,2,60.,175.)
+C+++ SET ADDITIONAL PARAMETERS FOR RENAL FAILURE
+      FPPL(9)=0.5
+      FPPL(12)=0.
+      FPPL(17)=0.
+  250 WRITE (KL,260)
+  260 FORMAT (//,' --- NEW SUBJECT ---',/)
+      RETURN
+      END
+      SUBROUTINE DCNTRL(PR)
+C
+C ENABLES RUN CHANGES.
+      DIMENSION PR(5)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      IF (NW2.GT.19) GO TO 30
+   10 WRITE (KT,20) RCI
+   20 FORMAT (' TYPE LENGTH OF RUN IN HOURS (CURRENTLY =',F5.1,')')
+      NW2=0
+   30 CALL NXTWD(17,RCI,NNN,1,120)
+      IF (NW2.GT.19) GO TO 60
+      NW2=0
+   40 WRITE (KT,50)
+   50 FORMAT (' DO YOU WANT  1.GRAPHS OF TOTAL PLASMA DRUG CONCN., 2. FR
+     XEE DRUG CONCN.,',/'  3.URINE CONCN., 4.NUMERICAL DISPLAY OF ALL')
+   60 CALL NXTWD(17,XXX,IPLT,1,4)
+      IF (NW2.GT.19) GO TO 90
+      NW2=0
+   70 WRITE (KT,80)
+   80 FORMAT (' DO YOU WANT TO PLOT OUTPUT EVERY.. 1) 15,  2) 30,  3) 60
+     1,  4) 120  MINS')
+C OPTION 5 ALLOWS OUTPUT INTERVAL TO BE SPECIFIED IN HOURS
+   90 CALL NXTWD(17,XXX,IGI,0,5)
+      IF (IGI) 100,100,110
+  100 MODE=0
+      TMAX=2.
+      GO TO 120
+110   IF(IGI.LE.4) GOTO 119
+      IF(NW2.GT.19) GOTO 115
+      WRITE(KT,111)
+111   FORMAT(' TYPE OUTPUT FREQUENCY IN HOURS')
+115   CALL NXTWD(17,XXX,NNN,0,48)
+      PR(5)=XXX
+  119 TMAX=PR(IGI)
+C*** SET SWITCH FOR BATCH PRINTING FILE (UNIT 4)
+      WRITE(KT,121)
+121   FORMAT(' TYPE 1 FOR VDU OUTPUT ONLY, 2 TO STORE COPY FOR '
+     1'PRINTING')
+      CALL NXTWD(17,XXX,NNN,1,2)
+      KA=0
+      IF(NNN.EQ.2) KA=4
+      IF (MODE) 150,120,150
+  120 XXX=TMIN*60.
+      IF (NW2.GT.19) GO TO 140
+      NW2=0
+      WRITE (KT,130) XXX
+  130 FORMAT (' MIN. ITERATION TIME (CURRENTLY ',F4.1,' MIN)')
+  140 CALL NXTWD(17,XXX,NNN,0,60)
+      TMIN=XXX/60.
+C  ALLOW ADJUSTMENT TO ACCURACY SOLN. EQNS.
+      IF(NW2.GT.19) GOTO 145
+      NW2=0
+      WRITE(KT,141) PRECN
+141   FORMAT(' PRECISION FACTOR (CURRENTLY',F5.1,') TRY 10 -50')
+145   CALL NXTWD(17,PRECN,NNN,1,50)
+  150 RETURN
+      END
+      SUBROUTINE DDUMP (NN)
+C THIS S/R ALLOWS STORAGE AND BACKTRACKING
+      DIMENSION NTAB(115),TR(853)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      COMMON NDUMP(115),TDUMP(853)
+      COMMON /DIR/KD,KDP,INC,NDR,INDIR(54),KN(15),XKTT(15),FF(52)
+      EQUIVALENCE (NAME(1,1),NTAB(1)),(FDDT(1,1),TR(1))
+      IF (NN.EQ.16) GO TO 50
+      IF (NN.GT.1) GO TO 80
+      IF (NW2.GT.19) GO TO 20
+      WRITE (KT,10)
+   10 FORMAT (' DO YOU WANT TO 1.STORE PRESENT STATE, 2.BACKTRACK TO LAS
+     XT STORED STATE'/' 3. STORE DRUG ON DISC FILE')
+   20 CALL NXTWD (17,XXX,NNN,1,3)
+      GO TO (30,80,200), NNN
+   30 WRITE (KL,40)
+   40 FORMAT (' STORED AT THIS POINT ************')
+      IF(KA.EQ.4) WRITE(KA,40)
+   50 DO 60 I = 1,115
+   60 NDUMP(I)=NTAB(I)
+      DO 70 I = 1,853
+   70 TDUMP(I)=TR(I)
+      RETURN
+   80 WRITE (KL,90)
+   90 FORMAT (' ************ BACKTRACK TO LAST STORE')
+      IF(KA.EQ.4) WRITE(KA,90)
+      DO 100 I = 1,115
+  100 NTAB(I)=NDUMP(I)
+      DO 110 I = 1,853
+  110 TR(I)=TDUMP(I)
+      RETURN
+C STORE DRUG WITH NEW NAME AND TOXIC SYMPTOM
+200   IF(NW2.GT.19) GOTO 220
+      WRITE(KT,210)
+210   FORMAT(' ENTER NUMBER OF DRUG TO BE DUMPED')
+220   CALL NXTWD(17,XXX,NNN,1,NDMAX)
+225   WRITE(KT,230) (NAME(NNN,I),I=1,15)
+230   FORMAT(' THIS IS ',15A1,' .ENTER NEW NAME TO BE USED'/)
+      READ(INI,240) (K(I),I=1,72)
+240   FORMAT(72A1)
+      MD=2
+      NPT=1
+      CALL DMXSCN(K,MD,NPT,FWRD)
+      IF(MD.NE.3) GOTO 225
+C CHECK
+      DO 245 I=1,15
+245   KN(I)=K(I)
+      IFWD=IFIX(FWRD)
+      WRITE(KT,250) IFWD
+250   FORMAT(' DRUG CODE NUMBER IS ',I4)
+      WRITE(KT,260)
+260   FORMAT(' ENTER SYMPTOM TO BE ASSOCIATED WITH TOXICITY'/)
+      READ(INI,270) XKTT
+270   FORMAT(15A4)
+      DO 280 I=1,51
+280   FF(I)=FDPL(NNN,I)
+      FF(52)=IFWD
+      CALL DRWDR(2,IFWD,IND)
+      IF(IND.GT.0) WRITE(KT,290)
+290   FORMAT(' DRUG ADDED TO FILE')
+      RETURN
+      END
+      SUBROUTINE DENZ(GT,Y,VMAX,I,J,ARY,M)
+C THIS SUBROUTINE CALCULATES THE ZERO ORDER TERM G+
+C AND THE FIRST ORDER TERM Y TO EXPRESS THE ENZYME VELOCITY V
+C AS A LOCAL LINEAR FUNCTION OF DRUG CONCENTRATION
+C COMPETITIVE INHIBITION IS CONSIDERED
+      DIMENSION ARY(4)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      SUM=1.0
+      DO 20 L = 1,NDMAX
+      IF (FDPL(M,I)-FDPL(L,I)) 20,10,20
+   10 SUM=SUM+U(L,1)*FDPL(L,J)/ARY(L)
+   20 CONTINUE
+      S=U(M,1)*FDPL(M,J)/ARY(M)
+      GT=0.0
+      IF (S) 40,40,30
+   30 GT=VMAX*(S/SUM)**2
+   40 Y=VMAX*FDPL(M,J)*(SUM-S)/(ARY(M)*SUM**2)
+      RETURN
+      END
+      SUBROUTINE DFNCT(X,Y,DERY)
+      DIMENSION DERY(8),Y(8)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+CC    DERY(1)=-AM(1)*Y(1)+A12*Y(2)+A13*Y(3)+A14*Y(4)+A15*Y(5)+A16*Y(6)
+      DERY(1)=-AM(1)*Y(1)+A14*Y(4)+A15*Y(5)+A16*Y(6)
+     X+A17*Y(7)+G(1)+DRIP
+CC    DERY(2)=A21*Y(1)-AM(2)*Y(2)
+      DERY(2)=-AM(2)*Y(2)+A25*Y(5)
+CC    DERY(3)=A31*Y(1)+A32*Y(2)-AM(3)*Y(3)+AL3
+      DERY(3)=A32*Y(2)-AM(3)*Y(3)+A35*Y(5)+AL3
+      DERY(4)=AM(4)*(Y(1)-Y(4))
+CC    DERY(5)=AM(5)*(Y(1)-Y(5))
+      DERY(5)=TIN(5)*Y(1)+A52*Y(2)+A53*Y(3)-AM(5)*Y(5)+G(6)
+      DERY(6)=AM(6)*(Y(1)-Y(6))
+      DERY(7)=A71*Y(1)-AM(7)*Y(7)+A78*Y(8)
+      DERY(8)=AM(8)*(Y(7)-Y(8))
+      RETURN
+      END
+      SUBROUTINE DITDNC(I,M)
+C SUBROUTINE DITDNC COMPARES A KEYWORD EQUIVALENT NO. I WITH TABLE ITAB
+C AND RETURNS A CORRESPONDING KEYWORD CODE FROM TABLE MTAB.
+C THE TABLE OF CODES IS AS FOLLOWS:  M = KEYWORD (CODE I)
+C 1=Q(-24), 2=FOR(-91), 3=TIMES(-137), M(-28), MX(-37), X(-9),
+C 4=MIN(-94), MINUTES(-176), 5=H(-40), HR(-63), HRS(-77), HOUR(-101),
+C HOURS(-115), 6=D(-44), DAY(-99), DAYS(-113), 7=W(-10), WEEK(-126),
+C WEEKS(-140), 8=GR(64), GRS(-78), GRAM(-139), GRAMS(-153), G(-41),
+C GM(-69), 9=MG(-69), MGR(-92), MILLIGRAM(-303), MILLIGRAMS(-317),
+C MGRS(-106), 10=MMG(-97), MMGR(-120), MICROGRAM(-300), MICROGRAMS(-314)
+C UGR(-76), 11=UNITS(105), IU(51), 12=OD(-70), 13=BID(-129), 14=TID(-96)
+C 15=QID(-107), 16=IV(-50), 17=IM(-67), 18=PO(-51), 19=BM(-75), AC(-92),
+C 20=AM(-74), PC=(70), 21=STAT(-87), 22=CANCEL(-236), 23=IVDRIP(-181),
+C 24=IVDRIP?? (-181).
+      DIMENSION ITAB(52),MTAB(52)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      DATA ITAB/-24,-91,-137,-28,-37,-9,-94,-176,-40,-77,-115,-44,-99,
+     X-113,-10,-126,-140,-64,-78,-139,-153,-69,-92,-303,-317,-97,-120,
+     X-300,-314,-76,-105,51,-70,-129,-96,-107,-50,-67,-51,-75,92,
+     X-74,70,-87,-236,-181,-181,-63,-101, -106,+69,-41/
+      DATA MTAB/1,2,4*3,2*4,3*5,3*6,3*7,4*8,4*9,5*10,2*11,
+     X12,13,14,15,16,17,18,2*19,2*20,21,22,23,24,2*5,9,2*8/
+      DO 10 L = 1,52
+      IF (ITAB(L)-I) 10,30,10
+   10 CONTINUE
+      M=100
+      WRITE (KT,20)
+   20 FORMAT (' WORD NOT RECOGNISED',/)
+      RETURN
+   30 M=MTAB(L)
+      RETURN
+      END
+      SUBROUTINE DMINIT(NN)
+C
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      COMMON /DIR/KD,KDP,INC,NDR,INDIR(54),KN(15),XKTT(15),FF(52)
+C     IF (NN.EQ.16) CALL DDUMP(NN)
+C INITIALISE DRUG COMPTS.U(I,J) AND INITIAL CONC. UNEW(J)
+C URINE VOLUME
+      UVOL=0.
+      DO 15 J = 1,6
+C LIVER METABOLIC ROUTES
+      NM(J)=0
+      NMS(J)=0
+      NMF(J)=0
+C ORAL AND IV DOSES
+      D(J,1)=0.
+      D(J,2)=0.
+C CLEAR OUT ANY RESIDUAL IVDRIP
+      ULAST(J)=0.
+C SOLID PHASE
+      POOL1(J)=0.
+      POOL2(J)=0.
+      RATE(J)=0.
+      SP1(J)=0.
+      SP2(J)=0.
+      SR(J)=0.
+C DRUG COMPT. CONCENTRATIONS
+      BETN(J)=0.
+      UNEW(J)=0.
+      DO 10 L = 1,8
+   10 U(J,L)=0.
+C INITIALISE ENTERO-HEPATIC DELAY LINE
+      DO 15 I=1,31
+15    EHDL(J,I)=0.
+      TENT=0.
+      TOUT=.08333333334
+      TNCI=TOUT
+      TNCO=2.*TOUT
+      IIN=1
+      IOUT=2
+C CLEAR EXISTING DRUGS IN THE SYSTEM EXCEPT IN RESEARCH MODE
+      IF (MODE) 20,20,50
+   20 IF (NDMAX) 50,50,30
+   30 WRITE (KT,40)
+   40 FORMAT (' DO YOU WISH TO RESET ALL DRUG PARAMETERS...1.YES, 2.NO')
+      NW2=0
+      CALL NXTWD(0,XXX,NNN,1,2)
+      IF (NNN-2) 50,70,70
+C INITIALISE DRUG FACTORS
+   50 DO 60 L1 = 1,52
+      DO 60 L = 1,6
+   60 FDPL(L,L1)=0.0
+      NDMAX=0
+      ND=0
+   70 FLF=1.
+C  TIME IS SET TO 8 A.M. OF DAY ONE.
+      T=0.
+      TPRT=0.
+      TNEXT=1.
+      TP=TMIN
+      INC=0
+C DISC FILE DIRECTORY OF DRUGS NOT IN MEMORY
+      RETURN
+      END
+      SUBROUTINE DMXSCN(K,MD,NPT,FWRD)
+C SUBROUTINE TO PROCESS TEXT AND NUMBERS IN THE PRESCRIPTION LINE.
+C IT SCANS TNE INPUT LINE K(70)  (70A1 FORMAT) FOR NUMERIC OR ALPHABETIC
+C STRING AND RETURNS A NUMERIC VALUE (CODED, IN THE CASE OF STRING)
+C  NQ= INDEX TO QUERY MESSAGE, IF 'Q' IS FOUND IN COL.1.
+C  NPT=POINTER TO THE CURRENT LOCATION IN ARRAY K BEING PROCESSED,
+C  MD = MODE OF SCAN, AS FOLLOWS:
+C   INPUT: MD=0 - MODE UNSPECIFIED, SCAN ALPHA/NUMERIC BY CONTEXT,
+C            =1 - NUMBER EXPECTED, TERMINATED BY A BLANK,
+C            =2 - ALPHABETIC STRING EXPECTED, TERMINATED BY A BLANK,
+C            =3 - NUMBER EXPECTED, ANY TERMINATOR,
+C            =4 - ALPHABETIC STRING EXTECTED, ANY TERMINATOR,
+C   OUTPUT : MD=1 - UNDETERMINED (NUMBER OR ALPHA FOUND IN MODE 0)
+C              =2 - NUMBER FOUND - VALUE IS RETURNED IN FWRD,
+C              =3 - ALPHABETIC STRING FOUNDED - CODED VALUE RETURNED IN
+C                  FWRD. CODE IS SIMPLY AN ARITHMETIC SUM OF THE CODE OF
+C                  EACH CHARACTER AS DETERMINED BY THE FUNCTION MXCODE)
+C              =4 - ERROR - DATA INCOMPATIBLE WITH SPECIFIED MODE,
+C              =5 - ERROR, TWO DECIMAL POINTS,
+C              =6 - END OF INPUT OR BLANK LINE FOUND.
+C   SPECIAL ADDITIONS FOR RESEARCH MODE USE ONLY:
+C   IF K(1) IS BLANK SET FWRD=1600.
+C IF ENTIRE LINE IS BLANK THEN SET FWRD=0., MD=3
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,KY(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      DIMENSION K(70)
+      INTEGER DOT,BLANK,QQ,CC,MM,UU,XK
+      DATA DOT,BLANK,QQ,CC,MM,UU/'.',' ','Q','C','M','U'/
+      NW2=0
+10    IF(K(1).NE.QQ.OR.K(2).NE.BLANK) GOTO 50
+   20 CALL DQUERY(7)
+      WRITE (KT,30)
+   30 FORMAT (' PLEASE ENTER YOUR RESPONSE',/)
+      NPT=1
+      READ (INI,40) K
+   40 FORMAT (72A1)
+      GO TO 10
+C SKIP LEADING BLANKS UNLESS IN RESEARCH MODE
+   50 IF (MXCODE(K(1)-80)) 80,60,80
+   60 IF (MODE) 70,70,80
+   70 FWRD=1600.
+      RETURN
+   80 DO 90 I = NPT,70
+      IF (MXCODE(K(I))-80) 130,90,130
+   90 CONTINUE
+C IF WHOLE LINE BLANK IN RESEARCH MODE TREAT AS SIGNATURE
+      IF (NPT-1) 110,100,110
+  100 MD=3
+      GO TO 120
+  110 MD=6
+  120 FWRD=0.
+      GO TO 480
+  130 NPT=I
+      XK=K(NPT+1)
+      SIGN=1.
+      FWRD=.0
+      XMLT=1.0
+      NDC=1
+      N=1
+      M=1
+      IF (MD) 150,140,150
+  140 M=2
+  150 CONTINUE
+      IF ((MD-3)*(MD-4)) 170,160,170
+  160 MD=MD-2
+      M=2
+  170 KLX=MXCODE(K(NPT))
+      IF (KLX-80) 180,330,180
+  180 IF (KLX*(9-KLX)) 230,190,190
+  190 IF (MD-1) 200,210,220
+C     TEST MODE
+  200 MD=1
+  210 FWRD=FWRD*10.+KLX
+      XMLT=XMLT*NDC
+      GO TO 320
+  220 IF ((M-1)*(N-1)) 340,390,340
+  230 IF (KLX-91) 280,240,280
+  240 IF (MD-2) 250,320,250
+  250 IF (NDC-1) 260,270,260
+  260 MD=5
+      GO TO 480
+  270 MD=1
+      NDC=10
+      GO TO 320
+  280 IF (KLX-112) 300,290,300
+  290 SIGN=-1.
+      GO TO 320
+  300 IF (MD-1) 310,220,310
+  310 FWRD=FWRD+KLX
+      MD=2
+  320 CONTINUE
+      N=2
+      NPT=NPT+1
+      IF (NPT-70) 170,170,400
+  330 NPT=NPT+1
+  340 MD=MD+1
+      IF (MD-2) 360,350,360
+  350 FWRD=FWRD*SIGN/XMLT
+      GO TO 480
+360   IF (XK.EQ.CC.OR.XK.EQ.MM.OR.XK.EQ.UU) XK=0.
+      IF (XK) 480,370,480
+370   XK=1
+      IF((FWRD.EQ.51.).OR.(FWRD.EQ.92.).OR.(FWRD.EQ.70.)
+     X .OR.(FWRD.EQ.69.)) XK=0
+      IF (XK) 480,380,480
+  380 FWRD=-FWRD
+      GO TO 480
+  390 MD=4
+      GO TO 480
+  400 MD=6
+  480 RETURN
+      END
+      FUNCTION MXCODE(ICH)
+C ENCODES A CHARACTER IN AN INTERNAL NUMERIC CODE. USED ONLY IN MXSCN.
+C (THE CODE IS INFACT THE SAME AS USED ON IBM/1130, FOR
+C  HISTORICAL REASONS )
+      INTEGER CHAR(39), CODE(39)
+      DATA CHAR/' ','0','1','2','3','4','5','6','7','8','9',
+     X 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P',
+     X 'Q','R','S','T','U','V','W','X','Y','Z','-','.'/
+      DATA CODE/80,0,1,2,3,4,5,6,7,8,9,-47,-46,-45,-44,-43,-42,-41,-40,
+     X -39,-31,-30,-29,-28,-27,-26,-25,-24,-23,-14,-13,-12,-11,-10,-9,
+     X -8,-7,112,91/
+      DO 10 I = 1,39
+      IF (ICH.EQ.CHAR(I)) GOTO 20
+   10 CONTINUE
+C  CHARACTER NOT IN LIST; TREAT AS A BLANK.
+      MXCODE=80
+      RETURN
+   20 MXCODE=CODE(I)
+      RETURN
+      END
+      SUBROUTINE NXTWD (LL3,XXX,NNN,IMIN,IMAX)
+C THIS S/R AND FUNCTIONS VALUE AND V1 ALLOW NUMBERS TO BE ENTERED IN
+C FREE FORMAT AND RETRIEVED IN STANDARD REAL OR INTEGER FORM, OR FED
+C INTO ARRAYS IF NEEDED OR, IF *Q* IS TYPED, REFERENCE IS MADE TO
+C S/R QUERY TO EXPLAIN THE MEANING OF THE QUESTION. OTHERWISE
+C THIS SR.AND FUNCTIONS ARE SELF EXPLANATORY
+        DIMENSION ICHAR(18),ITEM(20)
+        COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,ITRIG(73),NEOF,NW
+        DATA ICHAR/1H ,1H1,1H2,1H3,1H4,1H5,1H6,1H7,1H8,1H9,1H0,
+     X             1H.,1H-,1H/,1HB,1HF,1HU,1HQ/
+      XMIN=IMIN
+      XMAX=IMAX
+  100 DO 110 J=1,20
+      ITEM(J)=1
+  110 CONTINUE
+      IF (NW2.GE.1) GO TO 200
+      NREF=NEOF
+      DO 120 J=1,72
+  120 ITRIG(J)=ICHAR(1)
+      IL=1
+C*** THE FOLLOWING (OPTIONAL) 2 STATEMENTS MAY BE USED TO
+C RETURN THE CURSOR TO THE START OF THE LINE, IF THE COMPUTER
+C DOESN*T DO IT, THEREBY ALLOWING THE INSERTION OF A LONG
+C STRING OF OPERATING INSTRUCTIONS ALONG THE LINE OF INPUT
+C     WRITE (KT,130)
+  130 FORMAT (1X,'?')
+      READ (INI,140) (ITRIG(IM),IM=1,72)
+  140 FORMAT (72A1)
+  150 IF (ITRIG(1).NE.ICHAR(1).AND.ITRIG(1).NE.ICHAR(14)) GO TO 190
+C EXTRA STATEMENT MAKES 'NO ENTRY' KEEP DEFAULT VALUES
+C         FOR PARAMETERS
+      IF (LL3.EQ.14) GO TO 388
+  160 WRITE (KT,170)
+  170 FORMAT (' A NUMBER MUST BE ENTERED')
+      GO TO 240
+  180 CALL DQUERY (LL3)
+      GO TO 240
+  190 IF (ITRIG(IL).EQ.ICHAR(18)) GO TO 180
+      NW1=IL
+  200 L=0
+      DO 280 IL=NW1,72
+      DO 210 J=1,14
+      IF (ITRIG(IL).EQ.ICHAR(J)) GO TO 260
+  210 CONTINUE
+      IF ((ITRIG(IL).EQ.ICHAR(15).OR.ITRIG(IL).EQ.ICHAR(16)).AND.ITRIG(I
+     XL+1).EQ.ICHAR(17)) GO TO 350
+  220 WRITE (KT,230)
+  230 FORMAT (' ONLY NUMBERS ARE ACCEPTABLE')
+  240 WRITE (KT,250)
+  250 FORMAT (' PLEASE TRY AGAIN')
+      NW2=0
+      NEOF=NREF
+      GO TO 100
+  260 IF (J.NE.1.AND.J.NE.14) GO TO 270
+      IF (L) 280,280,290
+  270 L=L+1
+      IF (L.EQ.20) GO TO 370
+      ITEM(L)=J
+      IF (J.EQ.1) GO TO 290
+  280 CONTINUE
+      IL=72
+      IF (NW2.GT.19) GO TO 160
+  290 NW1=IL+1
+C DETECT SLASH / DELIMITER
+      IF (J.EQ.14) GO TO 340
+      IF (J.EQ.1.AND.NEOF.LE.1) NW2=0
+      IF (J.EQ.1.AND.ITRIG(NW1).EQ.ICHAR(1).AND.
+     X NW2.GT.19) GO TO 390
+  300 IF (NW1.GE.72) GO TO 330
+      XXX=VALUE(ITEM)
+C REARRANGES, ECONOMISES, AND ALLOWS 'NO ENTRY' TO RETAIN
+C         PREVIOUS VALUES, BY RETURNING -999 AS ARGUMENT NNN
+      NNN=INT(XXX)
+      IF (NNN.EQ.-999) GO TO 320
+      IF (((XXX-XMIN)*(XMAX-XXX)).LT.0.) GO TO 370
+  320 NEOF=NEOF-1
+      RETURN
+  330 NEOF=1
+      NW2=0
+      GO TO 320
+  340 NW2=20
+      JKL=0
+      NEOF=1
+      GO TO 300
+  350 WRITE (KT,360)
+  360 FORMAT (' DON*T USE RUDE WORDS')
+      GO TO 220
+C MORE INFORMATIVE ERROR MESSAGE; INSERT '-999' IF NO ENTRY MADE
+C         AND PARAMETER LL3=10
+  370 WRITE (KT,380) IMIN,IMAX
+  380 FORMAT (' IT HAS TO BE BETWEEN',I7,' AND',I6)
+      GO TO 240
+  388 ITEM(1)=13
+      DO 389 J=2,4
+389   ITEM(J)=10
+      NW1=1
+C........
+  390 JKL=0
+      NW2=0
+      GO TO 300
+      END
+      REAL FUNCTION VALUE(ITEM)
+      INTEGER ITEM(20)
+      VALUE=0.
+      I=1
+      VALUE=V1(ITEM,I)
+      IF ((ITEM(I).EQ.1).OR.(I.GE.20)) RETURN
+      I=I+1
+      VALUE=VALUE*(10.**V1(ITEM,I))
+      RETURN
+      END
+      REAL FUNCTION V1(ITEM,I)
+      DIMENSION DIGIT(13)
+      INTEGER ITEM(20)
+      DATA DIGIT/0.,1.,2.,3.,4.,5.,6.,7.,8.,9.,0.,0.,-1./
+      S=1.
+      V1=0.
+      P=0.
+      NDOT=0
+   10 IF ((ITEM(I).EQ.1).OR.(I.GE.20)) GO TO 60
+      IF (ITEM(I).EQ.12) GO TO 30
+      IF (ITEM(I).EQ.13) GO TO 40
+      IF (NDOT.EQ.1) GO TO 20
+      IZ=ITEM(I)
+      V1=(V1*10.+DIGIT(IZ))
+      GO TO 50
+   20 P=P+1.
+      IZ=ITEM(I)
+      V1=(V1+(DIGIT(IZ)/(10.**P)))
+      GO TO 50
+   30 NDOT=NDOT+1
+      GO TO 50
+   40 IZ=ITEM(I)
+      S=DIGIT(IZ)
+   50 I=I+1
+      GO TO 10
+   60 V1=V1*S
+      RETURN
+      END
+      SUBROUTINE DPATIE(AGE,ISEX,WT,HT)
+C
+C  TO SET-UP A SUBJECT OF SPECIFIED AGE, SEX, WT AND HEIGHT.
+C
+      DIMENSION FPL(23)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+C**INITIAL VALUES FOR THE FPPL PARAMETERS.
+      DATA FPL/0.,3.5,5.,0.,0.,0.,0.,1.,0.,5.5,0.,1.,0.,1.,0.,0.,1.,1.,
+     X7.4,1.2,0.,5.5,60./
+C
+      DO 10 I = 1,23
+   10 FPPL(I)=FPL(I)
+      FPPL(15)=WT/70.
+C
+C  CALCULATE TOTAL BODY WATER AND FAT FROM AGE, SEX AND WEIGHT.
+   20 IF (AGE.GT.50.) GO TO 50
+      IF (AGE.GE.12.) GO TO 40
+      IF (AGE.GT.1.) GO TO 30
+C
+C  INFANT, 1 YEAR OR BELOW, MALE OR FEMALE.
+      TBW=(0.75-0.15*AGE)*WT
+      FPPL(5)=(0.11+0.1*AGE)*WT
+      GO TO 60
+C
+C   ABOVE 1 YEAR BUT BELOW 12 YEARS, MALE OR FEMALE.
+   30 OPTWT=(0.135+0.0111*AGE)*HT
+      TBW=0.5*OPTWT
+      FPPL(5)=WT-0.8*OPTWT
+      GO TO 60
+C
+C   BETWEEN 12 AND 50, INCLUSIVE
+   40 IF (ISEX.EQ.2) GO TO 50
+C   MALE
+      OPTWT=51.5+0.723*(HT-150.)
+      TBW=0.6*OPTWT
+      FPPL(5)=WT-0.8*OPTWT
+      GO TO 60
+C   FEMALE
+   50 OPTWT=47.2+0.638*(HT-150.)
+      TBW=0.5*OPTWT
+      FPPL(5)=WT-0.7*OPTWT
+C
+C   ABOVE 50, MALE OR FEMALE ; SAME AS A FEMALE BETWEEN 12 AND 50
+C
+C   FACTORS DEPENDENT UPON THE TOTAL BODY VOLUME (TBW)
+   60 CONTINUE
+      FPPL(21)=0.005*TBW
+      FPPL(13)=0.01*TBW
+      FPPL(4)=0.069*TBW
+C SET LIVER VOLUME AVERAGE SUBJECT APPROX. 1.2 LITRES
+      FPPL(20)=0.03*TBW
+      FPPL(6)=0.32*TBW
+      FPPL(7)=0.60*TBW
+      FPPL(9)=0.171*TBW
+      FPPL(11)=0.0015*TBW
+C
+C   FACTORS DEPENDENT UPON AGE ONLY.
+      FPPL(1)=0.5
+      IF (AGE.LE.12.) FPPL(1)=0.2+0.025*AGE
+      FPPL(16)=0.5*FPPL(1)
+      IF (AGE-1.0) 70,70,80
+   70 FPPL(12)=WT/70.
+      GO TO 90
+   80 FPPL(12)=OPTWT/70.
+   90 FPPL(17)=FPPL(12)
+      FPPL(8)=FPPL(12)
+      RETURN
+      END
+      SUBROUTINE DPRNTL(K,MFX,FLBW,IAM)
+      DIMENSION K(72),FLBW(9,6)
+C PLOT GRAPH OR DATE AND SPECIAL VALUES
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,ITRIG(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+C NORMALLY HRS,MTS ARE PRINTED. EVERY 4 HRS, DAY IS ALSO PRINTED.
+      DO 9 I=1,NDMAX
+      DO 5 J=1,7
+      IF (FLBW(J,I)) 6,5,5
+5     CONTINUE
+      GOTO 9
+6     DO 7 J=1,7
+7     FLBW(J,I)=0.
+9     CONTINUE
+      IF (IAM-5) 2,170,170
+2     ITIME=IFIX(TPRT)
+      MTS=IFIX( (TPRT-FLOAT(ITIME))*60. )
+      ITIME=ITIME+8
+      IDAY=ITIME/24
+      IHR=ITIME-24*IDAY
+      IDAY=IDAY+1
+      IF (ITIME/4*4-ITIME) 20,10,20
+   10 IF (MTS-5) 80,80,20
+   20 IF (IAM-4) 50,30,50
+   30 DO 40 J = 1,NDMAX
+      IF(KA.EQ.4) WRITE(KA,70) (K(L),L=1,7),IHR,MTS,(FLBW(I,J),I=1,7)
+   40 WRITE (KT,70) (K(L),L=1,7),IHR,MTS,(FLBW(I,J),I=1,7)
+      GO TO 110
+   50 WRITE (KT,60) (K(L),L=1,7),IHR,MTS,(K(L),L=18,MFX)
+      IF(KA.EQ.4) WRITE(KA,60) (K(L),L=1,7),IHR,MTS,(K(L),L=18,MFX)
+   60 FORMAT (1H ,7A1,4X,I2,1H:,I2,55A1)
+   70 FORMAT (1H ,7A1,4X,I2,1H:,I2,F9.4,F5.1,4F8.3,F9.3)
+      RETURN
+   80 IF (IAM-4) 130,90,130
+   90 DO 100 J = 1,NDMAX
+      IF(KA.EQ.4) WRITE(KA,150) (K(L),L=1,7),IDAY,IHR,MTS,
+     1 (FLBW(I,J),I=1,7)
+  100 WRITE (KT,150) (K(L),L=1,7),IDAY,IHR,MTS,(FLBW(I,J),I=1,7)
+  110 WRITE (KT,120)
+      IF(KA.EQ.4) WRITE(KA,120)
+  120 FORMAT (2X)
+      RETURN
+  130 WRITE (KT,140) (K(L),L=1,7),IDAY,IHR,MTS,(K(L),L=18,MFX)
+      IF(KA.EQ.4) WRITE(KA,140)(K(L),L=1,7),IDAY,IHR,MTS,
+     1 (K(L),L=18,MFX)
+  140 FORMAT (1H ,7A1,I2,2X,I2,1H:,I2,55A1)
+  150 FORMAT (1H ,7A1,I2,2X,I2,1H:,I2,F9.4,F5.1,4F8.3,F9.3)
+      RETURN
+170   DO 180 J=1,NDMAX
+      IF(KA.EQ.4) WRITE(KA,190) J,(FLBW(I,J),I=1,7)
+180   WRITE (KT,190) J,(FLBW(I,J),I=1,7)
+190   FORMAT (2X,I1,F9.4,F7.1,1X,4F10.4,F12.4)
+      RETURN
+      END
+      SUBROUTINE DQUERY(NQ)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      GO TO (80,40,100,140,100,120,140,40,200,230,40,60,250,270,290,320,
+     X300,350), NQ
+   40 WRITE (KT,50)
+   50 FORMAT (' MACDOPE WAS DESIGNED BY DR.R.BLOCH, DR.G.SWEENEY AND DR.
+     XK.AHMED AT',/,' MCMASTER UNIVERSITY MEDICAL SCHOOL, HAMILTON, CANA
+     XDA AND BY',/,' DR.D.INGRAM AND DR.C.J.DICKINSON AT ST.BARTHOLOMEW*
+     XS HOSPITAL',/,' MEDICAL COLLEGE, ENGLAND.',
+     X//, ' IT HAS FOUR MAIN COMPONENTS -',
+     X/,   ' 1.A STORE OF PHYSIOLOGICAL DATA ON SUBJECTS OF ANY SIZE,SHA
+     XPE,AGE & SEX',/,   ' 2.A STORE OF INFORMATION ON A LIMITED NUMBER
+     XOF IMPORTANT DRUGS',/,' 3.A WORKING MODEL OF THE BODY WHICH ALLOWS
+     X YOU TO FOLLOW IN DETAIL',/,'   WHAT HAPPENS WHEN DIFFERENT DRUGS
+     XARE GIVEN BY DIFFERENT ROUTES',/,
+     X' 4.A PRESCRIBING ROUTINE WHICH ALLOWS YOU TO GIVE DRUGS IN ANY',/
+     X,'   DOSE OR BY ANY ROUTE.',//,' THE RESULTS COME IN THE FORM OF G
+     XRAPHS OR COLUMNS OF NUMERICAL',/,' VALUES, GIVING DRUG CONCENTRATI
+     XON CHANGES IN VARIOUS COMPARTMENTS.')
+      GO TO 340
+   60 WRITE (KT,70)
+   70 FORMAT (' I SHALL NOW TAKE A STUDENT VOLUNTEER AND GIVE HIM 1.0 MG
+     X DIGOXIN',/,' BY MOUTH.  WATCH WHAT HAPPENS TO THE PLASMA CONCENTR
+     XATION OF DIGOXIN',/,' IN THE NEXT 12 HOURS. (AROUND .002 MG/L IS M
+     XEAN THERAP.LEVEL).',/,' SYMBOLS  111 ETC. REPRESENT PLASMA CONCS.
+     XAGAINST TIME IN 2 HRS.',/)
+      GO TO 340
+   80 WRITE (KT,90)
+C*** LOCAL ARRANGEMENTS
+   90 FORMAT (' IF AN INSTRUCTION IS NOT CLEAR, TYPE Q FOR CLARIFICATION
+     X -',/,' AND PRESS *RETURN*',/)
+      GO TO 340
+  100 WRITE (KT,110)
+  110 FORMAT (' 1 ALLOWS YOU TO GIVE OR ADD PRESCRIPTIONS OF THE SAME OR
+     X OTHER DRUGS,',/,' 2 ALLOWS CHANGES IN LENGTH OF RUN, TYPE OF DISP
+     XLAY AND GIVES A CHOICE',/,' OF VARIOUS TYPES OF GRAPHICAL OUTPUT.'
+     X,/,' 3 ALLOWS THE PRESENT STATE TO BE STORED, AND RECREATED LATER
+     X',/,' 4 AND 5 ALLOW INSPECTION AND CHANGES IN PATIENT AND DRUG FAC
+     XTORS')
+      GO TO 340
+  120 WRITE (KT,130)
+  130 FORMAT (/)
+      GO TO 340
+  140 WRITE (KT,150)
+  150 FORMAT (' A PRESCRIPTION CONSISTS OF A DRUGNAME, AN AMOUNT, THE RO
+     XUTE AND',/,' THE FREQUENCY OF ADMINISTRATION. YOU CAN ALSO',
+     X' LIMIT THE PRESC.',//,
+     X' ASPIRIN 600 MG PO Q 6 HRS X 12',/,
+     X1X,1H:,7X,1H:,3X,1H:,2X,1H:,5X,1H:,6X,1H:,/
+     X1X,1H:,7X,1H:,3X,1H:,2X,1H:,5X,1H:,6X,'LIMIT ON DOSES OR TIME (E.G
+     X. FOR 1 DAY)',/
+     X1X,1H:,7X,1H:,3X,1H:,2X,1H:,5X,'EVERY 6 HRS(SEE MANUAL FOR JARGON)
+     X',/,1X,1H:,7X,1H:,3X,1H:,2X,'ROUTE (SC,IM,IV,IVDRIP,PO)',/,
+     X1X,1H:,7X,1H:,3X,'UNITS- G,MG,MMG OR MG PER H,ETC. FOR IVDRIP',/,
+     X1X,1H:,7X,'AMOUNT IN EACH DOSE',/,
+     X1X,'DRUG NAME (FOR A LIST TYPE QQ)',/,
+     X' IF *THEN* PRECEDES THE DRUG NAME, THIS PRESCN. WILL ONLY START W
+     XHEN',/,' THE LAST ONE HAS BEEN COMPLETED')
+      GO TO 340
+  200 WRITE (KT,210)
+  210 FORMAT (' *PATIENT FACTORS*  ARE A LIMITED NUMBER OF IMPORTANT DET
+     XERMINANTS',/, ' OF DRUG DISPOSITION WHICH VARY FROM ONE PATIENT TO
+     X ANOTHER')
+      WRITE (KT,220)
+  220 FORMAT (' 1/HR = A RATE CONSTANT.  DL=100 ML.  I/S = INTERSTITIAL.
+     X',/,' I/C = INTRACELLULAR,   HEPATIC AND RENAL TUBULE (SECRETORY)
+     XFUNCTION',/,' ARE INDICES IN ARBITRARY UNITS (AROUND 1) TO ALLOW T
+     XHE SIMULATION OF',/,' DISEASES OF THESE ORGANS')
+      GO TO 250
+  230 WRITE (KT,240)
+  240 FORMAT (' APART FROM PK (FACTOR 1) YOU WILL NEED TO REFER TO THE H
+     XANDBOOK FOR',/,' FULL EXPLANATION OF THESE FACTOR NUMBERS')
+  250 WRITE (KT,260)
+C*** LOCAL ARRANGEMENTS
+  260  FORMAT (' ENTER THE FACTOR NUMBER(S) TO CHANGE AS A NUMBER OR STR
+     XING OF NUMBERS',/,' SEPARATED BY BLANKS - *RETURN* AT THE END',
+     X/,' REFER TO HANDBOOK FOR LIST OF FACTORS')
+      GO TO 340
+  270 WRITE (KT,280)
+  280 FORMAT (' IF THE NEW VALUE IS TOTALLY RIDICULOUS YOU MAY *ABORT*
+     XTHE',/,' PROGRAM AND HAVE TO START AGAIN ')
+  290  CONTINUE
+      GO TO 340
+  300 WRITE (KT,310)
+  310 FORMAT (' THIS IS OBVIOUS')
+      GO TO 340
+  320 WRITE (KT,330)
+C*** LOCAL ARRANGEMENTS
+  330 FORMAT (/,' TO PROCEED TYPE 1 AND PRESS *RETURN* KEY,',/
+     X,' TO GET BRIEF INTRODUCTION AND INSTRUCTIONS TYPE 2 + RET')
+  340 RETURN
+  350 WRITE (KT,360)
+  360 FORMAT (' 1 IS OBVIOUS, 2 WILL START A RUN OF PREDETERMINED LENGTH
+     X AND TYPE.',/,' 3 GETS A NEW SUBJECT, 4 ALLOWS YOU TO INSPECT DRUG
+     X CONCENTRATIONS',/,' AND OTHER THINGS,  5 STOPS THE PROGRAMME')
+      GO TO 340
+      END
+      SUBROUTINE DSOLVE(PRMT,Y,DERY,NDIM,IHLF,AUX)
+      DIMENSION Y(8),DERY(8),AUX(8,8),A(4),B(4),C(4),PRMT(5)
+      DO 10 I = 1,NDIM
+   10 AUX(8,I)=.06666667*DERY(I)
+      X=PRMT(1)
+      XEND=PRMT(2)
+      H=PRMT(3)
+      PRMT(5)=0.
+      CALL DFNCT(X,Y,DERY)
+C     ERROR TEST
+      IF (H*(XEND-X)) 380,370,20
+C     PREPARATIONS FOR RUNGE-KUTTA METHOD
+   20 A(1)=.5
+      A(2)=.2928932
+      A(3)=1.707107
+      A(4)=.1666667
+      B(1)=2.
+      B(2)=1.
+      B(3)=1.
+      B(4)=2.
+      C(1)=.5
+      C(2)=.2928932
+      C(3)=1.707107
+      C(4)=.5
+C     PREPARATIONS OF FIRST RUNGE-KUTTA STEP
+      DO 30 I = 1,NDIM
+      AUX(1,I)=Y(I)
+      AUX(2,I)=DERY(I)
+      AUX(3,I)=0.
+   30 AUX(6,I)=0.
+      IREC=0
+      H=H+H
+      IHLF=-1
+      ISTEP=0
+      IEND=0
+C     START OF A RUNGE-KUTTA STEP
+   40 IF ((X+H-XEND)*H) 70,60,50
+   50 H=XEND-X
+   60 IEND=1
+C     RECORDING IF INITIAL VALUES OF THIS STEP
+   70 CONTINUE
+      IF (PRMT(5)) 400,80,400
+   80 ITEST=0
+   90 ISTEP=ISTEP+1
+C     START OF INNERMOST RUNGE-KUTTA LOOP
+      J=1
+  100 AJ=A(J)
+      BJ=B(J)
+      CJ=C(J)
+      DO 110 I = 1,NDIM
+      R1=H*DERY(I)
+      R2=AJ*(R1-BJ*AUX(6,I))
+      Y(I)=Y(I)+R2
+      R2=R2+R2+R2
+  110 AUX(6,I)=AUX(6,I)+R2-CJ*R1
+      IF (J-4) 120,150,150
+  120 J=J+1
+      IF (J-3) 130,140,130
+  130 X=X+.5*H
+  140 CALL DFNCT(X,Y,DERY)
+      GO TO 100
+C     END OF INNERMOST RUNGE-KUTTA LOOP
+C     TEST OF ACCURACY
+  150 IF (ITEST) 160,160,200
+C     IN CAST ITEST=0 THERE IS NO POSSIBILITY FOR TESTING OF ACCURACY
+  160 DO 170 I = 1,NDIM
+  170 AUX(4,I)=Y(I)
+      ITEST=1
+      ISTEP=ISTEP+ISTEP-2
+  180 IHLF=IHLF+1
+      X=X-H
+      H=.5*H
+      DO 190 I = 1,NDIM
+      Y(I)=AUX(1,I)
+      DERY(I)=AUX(2,I)
+  190 AUX(6,I)=AUX(3,I)
+      GO TO 90
+C     IN CAST ITEST=1 TESTING OF ACCURACY IS POSSIBLE
+  200 IMOD=ISTEP/2
+      IF (ISTEP-IMOD-IMOD) 210,230,210
+  210 CALL DFNCT(X,Y,DERY)
+      DO 220 I = 1,NDIM
+      AUX(5,I)=Y(I)
+  220 AUX(7,I)=DERY(I)
+      GO TO 90
+C     COMPUTATION OF TEST VALUE DELT
+  230 DELT=0.
+      DO 240 I = 1,NDIM
+  240 DELT=DELT+AUX(8,I)*ABS(AUX(4,I)-Y(I))
+      IF (DELT-PRMT(4)) 280,280,250
+C     ERROR IS TOO GREAT
+  250 IF (IHLF-10) 260,360,360
+  260 DO 270 I = 1,NDIM
+  270 AUX(4,I)=AUX(5,I)
+      ISTEP=ISTEP+ISTEP-4
+      X=X-H
+      IEND=0
+      GO TO 180
+C     RESULT VALUES ARE GOOD
+  280 CALL DFNCT(X,Y,DERY)
+      DO 290 I = 1,NDIM
+      AUX(1,I)=Y(I)
+      AUX(2,I)=DERY(I)
+      AUX(3,I)=AUX(6,I)
+      Y(I)=AUX(5,I)
+  290 DERY(I)=AUX(7,I)
+      IF (PRMT(5)) 400,300,400
+  300 DO 310 I = 1,NDIM
+      Y(I)=AUX(1,I)
+  310 DERY(I)=AUX(2,I)
+      IREC=IHLF
+      IF (IEND) 320,320,390
+C     INCREMENT GETS DOUBLED
+  320 IHLF=IHLF-1
+      ISTEP=ISTEP/2
+      H=H+H
+      IF (IHLF) 40,330,330
+  330 IMOD=ISTEP/2
+      IF (ISTEP-IMOD-IMOD) 40,340,40
+  340 IF (DELT-.02*PRMT(4)) 350,350,40
+  350 IHLF=IHLF-1
+      ISTEP=ISTEP/2
+      H=H+H
+      GO TO 40
+C     RETURNS TO CALLING PROGRAM
+  360 IHLF=11
+      CALL DFNCT(X,Y,DERY)
+      GO TO 390
+  370 IHLF=12
+      GO TO 390
+  380 IHLF=13
+  390 CONTINUE
+  400 RETURN
+      END
+      SUBROUTINE DTDAY(T,IDAY,ID)
+C
+C CALCULATES NUMBER OF DAYS PASSED AND DETERMINES IF DAY OR NIGHT
+C T=TIME ON ENTERING IN HOURS.
+C IDAY ON RETURNING=0 DURING DAYTIME=1 DURING NIGHTIME
+C ID ON RETURNING=NR OF DAYS PASSED.
+C
+      DAY=T/24.
+      ID=IFIX(DAY)
+      ITD=IFIX(T)-24*ID
+      IF (ITD-12) 20,20,10
+   10 IDAY=0
+      RETURN
+   20 IDAY=1
+      RETURN
+      END
+      SUBROUTINE DDRUGT(M,NOLD)
+C*** TO ADD A FURTHER DRUG TO THE FILE REQUIRES:
+C 1. ADD DIMENSION  REAL KNXX(15) AND DIMENSION KTXX(15) + FXX(51)
+C 2. ADD DRUG NAME DATA KNXX(15 REAL ELEMENTS)
+C 3. ADD DATA FOR TOXIC MESSAGE KTXX(15 ELEMENTS)
+C 4. SUPPLY 52 ITEMS OF DRUG DATA FXX
+C    NB. VARIABLE 36 (FXX(36)) SHLD. BE A NEGATIVE NUMBER
+C    IDENTIFYING THE NAME OF THE DRUG BY MXCODE S/R
+C    NUMBERING.
+C 5. THIS SAME NUMBER, IN INTEGER FORM, SHOULD SUBSTITUTE
+C    FOR ONE OF THE SPARE, UNUSED, 9999  IN DATA IDN(20)
+C 6. A FURTHER LINE CALLING DRGL WITH PARAMETERS KNXX,KTXX AND
+C    FXX, WITH ADDITION TO GO TO STATEMENT 10
+C 7. ADD THE NEW KNXX INTO THE PROGRAMME  AT THE WRITE
+C    STATEMENT FOLLOWING STATEMENT 190 .THIS ADDS IT TO THE
+C    PRINTED DRUG LIST
+C 8. REDIMENSION KN(15,XX)
+C 9. THAT*S ALL - NO CHANGES NEEDED IN COMMON, ETC.
+C M=1,2,3 FOR LOAD DRUG NOLD AS ND TH. IN USE
+      DIMENSION KN(15,1),IDN(20)
+      DIMENSION KN1(15)
+C     DIMENSION KN1(15),KN2(15),KN3(15),KN4(15),KN5(15),KN6(15),
+      REAL KT1(15)
+C     REAL KT1(15),KT2(15),KT3(15),KT4(15),KT5(15),KT6(15),
+      DIMENSION F1(52)
+C     DIMENSION F1(52),F2(52),F3(52),F4(52),F5(52),F6(52),
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      DATA KN1/'D','R','U','G',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
+     X ' '/
+C     DATA KN2/'A','S','P','I','R','I','N',' ',' ',' ',' ',' ',' ',' ',
+C    X ' '/
+C+++ DRUG (DUMMY DRUG, WITH INITIAL PARAMETERS LIKE DIGOXIN)
+      DATA KT1/'    ','    ','    ','    ','    ','    ','    ','    ',
+     X '    ','    ','    ','    ','    ','    ','    '/
+      DATA F1/   10.0000,     .3000,     .0000,     .0000,   15.0000,
+     X     1.0000,     .7500,    1.0000,     .0000,     .0290,
+     X      .2290,     .0000,  9999.000,    0.0010,    3.0000,
+     X     3.0000,    1.0000,     .1008,   9999.00,     .0000,
+     X      .0000,   9999.00,     .5000,     .7500,     .0000,
+     X      .0000,     .0000,     .0000,     .0000,     .0000,
+     X      .0000,     .0000,     .0000,     .0000,     .0000,
+     X     0.0000,     .0000,    1.0000,    1.0000,     .0000,
+     X      .0000,    8.0000,    0.0000,  781.0000,     .0000,
+     X      .0000,     .0000,     .0000,     .0000,     .0000,
+     X     1.0000, -120.0000/
+C+++ ASPIRIN
+C     DATA KT2/'DR. ','MY E','ARS ','ARE ','RING','ING ','    ',
+C    1'    ','    ','    ','    ','    ','    ','    ','    '/
+C     DATA F2/3.4000,     .3300,     .0000,     .0000,    1.0000,
+C    X     1.0000, 1000.0000,    1.0000,   60.0000,     .0290,
+C    X     2.0760,    1.0000, 1300.0000,   25.0000,    1.0000,
+C    X     1.0000,    1.0000,   20.0000,  500.0000,     .0000,
+C    X     2.0000,  300.0000,     .0000,     .0000,    10.000,
+C    X      .0000,     .0000,     .0000,     .0000,     .0000,
+C    X      .0000,     .0000,     .0000,     .0000,    1.0000,
+C    X      .0000, -314.0000,    1.0000,    1.0000,     .0000,
+C    X      .0000,    7.0000,    0.0000,  180.0000,     .0000,
+C    X      .0000,     .0000,     .0000,     .0000,     .0000,
+C    X     2.0000, -214.0000/
+      DATA IDN/2,-120,18*9999/
+      GO TO (10,190,220), M
+10    GOTO(20,30),NOLD
+   20 CALL DDRGL(KN1,KT1,F1)
+      RETURN
+   30 CALL DDRGL(KN1,KT1,F1)
+      RETURN
+C LIST DRUGS AVAILABLE
+190   CONTINUE
+      WRITE(KT,200) KN1,KN2
+200   FORMAT(4(1X,15A1,2X))
+  210 FORMAT (/)
+      RETURN
+  220 DO 230 I = 1,20
+  230 IDNL(I)=IDN(I)
+      DO 240 J=1,15
+      KN(J,1)=KN1(J)
+240   CONTINUE
+      RETURN
+      END
+      SUBROUTINE DDRGL(KN,KTN,F)
+      REAL KTN
+      DIMENSION KN(15),KTN(15),F(52)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      DO 10 I = 1,15
+      NAME(ND,I)=KN(I)
+   10 XMSGT(ND,I)=KTN(I)
+      DO 20 I = 1,52
+   20 FDPL(ND,I)=F(I)
+      RETURN
+      END
+      SUBROUTINE DLDDRG(IFWD,IR)
+C           SUBROUTINE TO LOAD DRUG IFWD IF POSSIBLE INTO
+C           WORKING AREA ND
+C           PARAMETERS
+C          IFWD          DRUG CODE NUMBER
+C          IR            RETURNED -1 IF NOT FOUND,
+C                        +VE SEQUENCE NO. OF DRUGS IN USE
+C
+C
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      COMMON /DIR/KD,KDP,INC,NDR,INDIR(54),KN(15),XKTT(15),FF(52)
+C
+C
+C
+C  CHECK IF DRUG ALREADY AVAILABLE
+      DO 600 I=1,NDMAX
+      IF(INT(FDPL(I,52))-IFWD) 600,790,600
+600   CONTINUE
+C IF DRUG NOT LOADED MAKE SURE HAVE ROOM
+      IF(ND-5) 700,700,1200
+C
+C
+C EXTEND SEARCH TO DISC FILE
+C LOAD DRUG DATA FROM FILE TO WORK AREA
+700   CALL DRWDR(1,IFWD,IR)
+C RETURN IR -1 IF NOT FOUND
+      IF(IR.GT.0) GOTO 800
+C     NOW SEARCH FOR DRUG IFWD IN LIST OF DRUGS HELD
+C     IN PROGRAM DATA IN SUBROUTINE DDRUGT
+      IDC=IDNL(1)
+      DO 680 L = 2,IDC
+      IF (IFWD-IDNL(L)) 680,900,680
+  680 CONTINUE
+      WRITE (KT,690)IFWD
+  690 FORMAT (1X,'ERROR',I5,' ;NAME OR ABBREVIATION NOT RECOGNISED.')
+      RETURN
+C
+C
+C DRUG ALREADY AVAILABLE AS SEQUENCE NO. I
+790   IR=I
+      RETURN
+C
+C
+C    TRANSFER DRUG DATA FROM FILE BUFFER TO WORK AREA ND
+800   ND=ND+1
+      CALL DDRGL(KN,XKTT,FF)
+      GOTO 990
+C TRANSFER DRUG DATA FROM PROGRAM DATA AREA TO WORK AREA ND
+900   ND=ND+1
+      NREF=L-1
+      CALL DDRUGT(1,NREF)
+990   IR=ND
+      RETURN
+C
+C NO ROOM TO LOAD DRUG
+1200  WRITE(KT,1210)
+1210  FORMAT(' TOO MANY DRUGS OR METABOLITES  -MAX=6')
+      IR=-1
+      RETURN
+      END
+      SUBROUTINE DLIVER(GFH,GSH,EH)
+C GFH,GSH ARE GENERATORS FOR FIRST ORDER AND SATURABLE
+C LIVER METABOLIC PROCESSES
+C EH IS A GENERATOR FOR VDRUG ENTERING THE ENTERO-HEPATIC
+C ROUTE TO THE INTESTINE
+C NM GIVES THE DRUG CODE FOR EACH DRUG IN THE WORK AREA
+C NMS GIVES THE DRUG NUMBER OF THE SATURABLE METABOILITE
+C NMF GIVES THE DRUG NUMBER OF THE FIRST ORDER PROCESS
+C METABOLITE
+C
+      DIMENSION GFH(6),GSH(6),EH(6),OUT(6)
+      COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,K(73),NEOF
+      COMMON ISIG,ISIGA(20),MODE
+      COMMON IDNL(20),NAME(6,15),NPR,NDMAX,ND,IPLT,IGI
+     X ,IIN,IOUT,NM(6),NMF(6),NMS(6)
+      COMMON FDDT(5,10),FPPL(23),FDPL(6,52),XMSGT(6,15),U(6,8),D(6,4),
+     X BETN(6),UNEW(6),UOLD(6),POOL1(6),POOL2(6),RATE(6),ULAST(6),UVOL,
+     X VLAST,T,TP,TMAX,TMIN,TPRT,TNEXT,RCI,FLF,TIN(9),C(8),AM(8),G(6),
+     X A52,A53,A14,A15,A16,A17,A25,A23,A35,A32,A71,A78,YR,GR,DRIP,PRECN
+     X ,EHDL(6,31),AL3,TENT,TOUT,TNCI,TNCO,SP1(6),SP2(6),SR(6)
+      COMMON NDUMP(115),TDUMP(853)
+C THE LIVER METABOLISM IS GOVERNED BY THE FOLLOWING PROCESSES.
+C       1. FIRST ORDER CONVERSION TO METABOLITE FDPL(,37)
+C       2. SATURABLE CONVERSION TO METABOLITE FDPL(,36)
+C
+C
+C  CONVERSION 1 IS CONTROLLED BY RATE OF CONVERSION FDPL(,25)
+C  MODIFIED BY THE INDUCING EFFECT OF DRUG REFLECTED IN FLF
+C  THE METABOLITE (IF SPEC.) IS DELIVERED BACK EITHER DIRECTLY AND
+C  IMMEDIATELY INTO PLASMA OR WITH 150 MINUTE DELAY VIA AN
+C  ENTERO-HEPATIC ROUTE TO THE INTESTINAL COMPARTMENT.
+C  THIS ROUTE IS DETERMINED BY FDPL(,35) (0/1/2).
+C
+C  CONVERSION 2 IS CONTROLLED BY PARAMETERS FDPL(,23),
+C  FDPL(,24), FDPL(,39) SPECIFYING VMAX,KA, AND TYPE OF
+C  LIVER ENZYME USED (TO PERMIT COMPETITIVE INHIBITION)
+C  DISPOSITION OF THE DRUG TO PLASMA OR ENTERO-HEPATIC
+C  CIRCULATION IS CONTROLLED BY FDPL(,45)
+C
+C SUBROUTINE EXITS WITH GFH,GSH SET TO GENERATOR TERMS
+C DESCRIBING INCREMENTING OF METABOLITES AND
+C DECREMENTING OF METABOLISED DRUGS AS RESULT OF
+C PROCESSES SPECIFIED.
+C EH GIVES THE AMOUNT OF DRUG TO BE RELEASED IN THE
+C INTESTINE FROM THE ENTERO-HEPATIC ROUTE
+C
+C
+C
+C     DISPLAY 'ENTER LIVER', NM,NMS,NMF
+C CLEAR ALL ARRAYS
+C SET UP ARRAY OF DRUGS IN WORKING AREA
+      DO 5 I=1,NDMAX
+      GSH(I)=0.
+      GFH(I)=0.
+5     EH(I)=0.
+      UPT=2.58333334
+C
+C
+C
+C  CALCULATE GENERATORS DRUG BY DRUG
+C CALCULATE RATES OF METABOLIC CONVERSION FOR EACH DRUG
+      DO 100 J=1,NDMAX
+C FIRST ORDER CONVERSION
+C BRANCH ON IF NO PROCESS SPECIFIED
+      BR=FDPL(J,25)
+      IF(BR.EQ.0.) GO TO 50
+      FH =FLF*BR*FPPL(8)/BETN(J)*U(J,5)
+C SET GENERATOR TO METABOLISE DRUG
+      GFH(J)=GFH(J)-FH
+      IND=NMF(J)
+C BRANCH TO APPROPRIATE ROUTE FOR DISPOSAL
+      IF(FDPL(J,35)-1) 50,10,20
+C SEND PRODUCT TO PLASMA
+C DON'T ALLOW METABOLISM TO SAME DRUG THIS ROUTE
+10    IF(IND.EQ.J) GOTO 50
+      GFH(IND)=GFH(IND)+FH
+      GOTO 50
+C
+C ENTERO HEPATIC ROUTE
+20    EH(IND)=EH(IND)+FH
+C
+C
+C SATURABLE METABOLISM
+C
+C
+C BRANCH IF NONE SPECIFIED
+50    BR=FDPL(J,23)
+      IF(BR.EQ.0) GOTO 100
+      VH=BR*FPPL(8)*FLF
+      CALL DENZ(GH,YH,VH,39,24,BETN,J)
+C CALCULATE RATE OF CONVERSION
+      FH=GH+YH*U(J,5)
+C SET GENERATOR TO REMOVE DRUG
+      GSH(J)=GSH(J)-FH
+      IND=NMS(J)
+C BRANCH TO DISPOSE APPROPRIATELY
+      IF(FDPL(J,45)-1) 100,60,70
+C REENTER PLASMA
+C DON'T ALLOW SAME DRUG TO REENTER PLASMA
+60    IF(IND.EQ.J)  GOTO 100
+      GSH(IND)=GSH(IND)+FH
+      GOTO 100
+C ENTERO-HEPATIC ROUTE
+70    EH(IND)=EH(IND)+FH
+100   CONTINUE
+C
+C
+C ENTERO-HEPATIC CIRCULATION ARRANGED AS FIXED 150 MINUTE
+C DELAY LINE. DRUG ENTERING FOR ITERATION TP IS RELEASED
+C INTO INTESTINE 150 MINUTES LATER.
+C DRUG IS STORED IN CIRCULAR BUFFER EHDL(3,31)
+C TO ALLOW SEPARATION 150 MINUTES NEED 155 MIN ARRAY
+C POINTERS USED ARE AS FOLLOWS:                INITIAL VALUE
+C     TENT     TIME DRUG ENTERS BUFFER (0-155MINS)    0
+C     TOUT    TIME DRUG LEAVES BUFFER                1/12
+C     TNCI    TIME AT NEXT CELL BOUNDARY FOR INPUT   1/12
+C     TNCO    TIME AT NEXT CELL BOUNDARY FOR OUTPUT  1/6
+C     IIN     POINTER TO CURRENT INPUT CELL          1
+C     IOUT    POINTER TO CURRENT OUTPUT CELL         2
+C ARRAY INITIALISED TO ZERO IN MINIT
+C
+C     OUT IS DRUG REMOVED IN INTERVAL TP
+C
+C FIRST WITHDRAW DRUG
+      DO 105 J=1,NDMAX
+105   OUT(J)=0.
+C     DISPLAY 'DELAY LINE' ,IIN,IOUT,TNCI,TNCO
+      TF=TOUT+TP
+110   IF(TF.GT.TNCO) GOTO 120
+      DO 115 J=1,NDMAX
+115   OUT(J)=OUT(J)+TP*12.*EHDL(J,IOUT)
+      TOUT=TF
+      GOTO 200
+120   DO 125 J=1,NDMAX
+      OUT(J)=OUT(J)+(TNCO-TOUT)*12.*EHDL(J,IOUT)
+125   EHDL(J,IOUT)=0.
+C  UPDATE POINTERS
+      CALL DEHPNT(IOUT,TOUT,TNCO,UPT,TF)
+      GOTO 110
+C
+C ENTER DRUG INTO DELAY LINE
+200   TF=TENT+TP
+C     DISPLAY 'ENTER DRUG',TF
+201   IF(TF.GT.TNCI) GOTO 210
+      TENT=TF
+      DO 205 J=1,NDMAX
+205   EHDL(J,IIN)=EHDL(J,IIN)+EH(J)*TP
+      GOTO 295
+210   DO 215 J=1,NDMAX
+215   EHDL(J,IIN)=EHDL(J,IIN)+(TNCI-TENT)*EH(J)
+      CALL DEHPNT(IIN,TENT, TNCI,UPT,TF)
+      GOTO 201
+C
+C
+C SET EH ARRAY TO AMOUNT OF DRUG EMERGING DURING ITERATION TP
+295   DO 300 J=1,NDMAX
+300   EH(J)=OUT(J)/TP
+C     DISPLAY 'LEAVE LIVER',GFH,GSH,EH,TF,T,IOUT
+      RETURN
+      END
+      SUBROUTINE DEHPNT(I,T,TNC,UPT,TF)
+C UPDATE POINTERS AND TIMES WITHIN E-H DELAY LINE
+      T=TNC
+      I=I+1
+      IF(I.EQ.32) GOTO 10
+      TNC=TNC+.08333334
+      RETURN
+10    TNC=.08333334
+      TF=TF-UPT
+      I=1
+      RETURN
+      END
+      SUBROUTINE DSORT(NM,NMX)
+C SET ARRAY NMX TO SEQUENCE NUMBER WITHIN ARRAY NM OF
+C MATCHING DRUG CODE
+      DIMENSION NM(6),NMX(6)
+      DO 10 I=1,6
+      KS=NMX(I)
+      IF(KS.EQ.0) GOTO 7
+      DO 5 J=1,6
+      IF(KS-NM(J)) 5,10,5
+  5   CONTINUE
+C IF NO MATCH SET TO 0
+7     J=0
+10    NMX(I)=J
+      RETURN
+      END
+/*EOR
+ 
+/*EOR
+ 
+/*EOR
+      SUBROUTINE DSOLVE(PRMT,Y,DERY,NDIM,IHLF,AUX)
+      DIMENSION Y(8),DERY(8),AUX(8,8),A(4),B(4),C(4),PRMT(5)
+      DO 10 I = 1,NDIM
+   10 AUX(8,I)=.06666667*DERY(I)
+      X=PRMT(1)
+      XEND=PRMT(2)
+      H=PRMT(3)
+      PRMT(5)=0.
+      CALL DFNCT(X,Y,DERY)
+C     ERROR TEST
+      IF (H*(XEND-X)) 380,370,20
+C     PREPARATIONS FOR RUNGE-KUTTA METHOD
+   20 A(1)=.5
+      A(2)=.2928932
+      A(3)=1.707107
+      A(4)=.1666667
+      B(1)=2.
+      B(2)=1.
+      B(3)=1.
+      B(4)=2.
+      C(1)=.5
+      C(2)=.2928932
+      C(3)=1.707107
+      C(4)=.5
+C     PREPARATIONS OF FIRST RUNGE-KUTTA STEP
+      DO 30 I = 1,NDIM
+      AUX(1,I)=Y(I)
+      AUX(2,I)=DERY(I)
+      AUX(3,I)=0.
+   30 AUX(6,I)=0.
+      IREC=0
+      H=H+H
+      IHLF=-1
+      ISTEP=0
+      IEND=0
+C     START OF A RUNGE-KUTTA STEP
+   40 IF ((X+H-XEND)*H) 70,60,50
+   50 H=XEND-X
+   60 IEND=1
+C     RECORDING IF INITIAL VALUES OF THIS STEP
+   70 CONTINUE
+      IF (PRMT(5)) 400,80,400
+   80 ITEST=0
+   90 ISTEP=ISTEP+1
+C     START OF INNERMOST RUNGE-KUTTA LOOP
+      J=1
+  100 AJ=A(J)
+      BJ=B(J)
+      CJ=C(J)
+      DO 110 I = 1,NDIM
+      R1=H*DERY(I)
+      R2=AJ*(R1-BJ*AUX(6,I))
+      Y(I)=Y(I)+R2
+      R2=R2+R2+R2
+  110 AUX(6,I)=AUX(6,I)+R2-CJ*R1
+      IF (J-4) 120,150,150
+  120 J=J+1
+      IF (J-3) 130,140,130
+  130 X=X+.5*H
+  140 CALL DFNCT(X,Y,DERY)
+      GO TO 100
+C     END OF INNERMOST RUNGE-KUTTA LOOP
+C     TEST OF ACCURACY
+  150 IF (ITEST) 160,160,200
+C     IN CAST ITEST=0 THERE IS NO POSSIBILITY FOR TESTING OF ACCURACY
+  160 DO 170 I = 1,NDIM
+  170 AUX(4,I)=Y(I)
+      ITEST=1
+      ISTEP=ISTEP+ISTEP-2
+  180 IHLF=IHLF+1
+      X=X-H
+      H=.5*H
+      DO 190 I = 1,NDIM
+      Y(I)=AUX(1,I)
+      DERY(I)=AUX(2,I)
+  190 AUX(6,I)=AUX(3,I)
+      GO TO 90
+C     IN CAST ITEST=1 TESTING OF ACCURACY IS POSSIBLE
+  200 IMOD=ISTEP/2
+      IF (ISTEP-IMOD-IMOD) 210,230,210
+  210 CALL DFNCT(X,Y,DERY)
+      DO 220 I = 1,NDIM
+      AUX(5,I)=Y(I)
+  220 AUX(7,I)=DERY(I)
+      GO TO 90
+C     COMPUTATION OF TEST VALUE DELT
+  230 DELT=0.
+      DO 240 I = 1,NDIM
+  240 DELT=DELT+AUX(8,I)*ABS(AUX(4,I)-Y(I))
+      IF (DELT-PRMT(4)) 280,280,250
+C     ERROR IS TOO GREAT
+  250 IF (IHLF-10) 260,360,360
+  260 DO 270 I = 1,NDIM
+  270 AUX(4,I)=AUX(5,I)
+      ISTEP=ISTEP+ISTEP-4
+      X=X-H
+      IEND=0
+      GO TO 180
+C     RESULT VALUES ARE GOOD
+  280 CALL DFNCT(X,Y,DERY)
+      DO 290 I = 1,NDIM
+      AUX(1,I)=Y(I)
+      AUX(2,I)=DERY(I)
+      AUX(3,I)=AUX(6,I)
+      Y(I)=AUX(5,I)
+  290 DERY(I)=AUX(7,I)
+      IF (PRMT(5)) 400,300,400
+  300 DO 310 I = 1,NDIM
+      Y(I)=AUX(1,I)
+  310 DERY(I)=AUX(2,I)
+      IREC=IHLF
+      IF (IEND) 320,320,390
+C     INCREMENT GETS DOUBLED
+  320 IHLF=IHLF-1
+      ISTEP=ISTEP/2
+      H=H+H
+      IF (IHLF) 40,330,330
+  330 IMOD=ISTEP/2
+      IF (ISTEP-IMOD-IMOD) 40,340,40
+  340 IF (DELT-.02*PRMT(4)) 350,350,40
+  350 IHLF=IHLF-1
+      ISTEP=ISTEP/2
+      H=H+H
+      GO TO 40
+C     RETURNS TO CALLING PROGRAM
+  360 IHLF=11
+      CALL DFNCT(X,Y,DERY)
+      GO TO 390
+  370 IHLF=12
+      GO TO 390
+  380 IHLF=13
+  390 CONTINUE
+  400 RETURN
+      END
+/*EOR
+ 
+/*EOR
+ 
+/*EOR
+       PROGRAM CONDEN
+C PROGRAM TO COPY AND CONDENSE DRUG DATA FILE FOR THE MACDOPEX PROGRAM.
+C USES SUBROUTINES FROM MODULE DF.FTN OF MACDOPEX TO HANDLE DRUG FILE I/O
+C OPERATION IS SELF EXPLANATORY
+       INTEGER YES,IY,IAST
+       DIMENSION IREF(54)
+       COMMON/DIR/ KD,KDP,INC,NDR,INDIR(54),KN(15),XKTT(15),FF(52)
+       COMMON KT,KL,INI,NW1,NW2,JKL,NPRT,LDISP,KA,ITRIG(73),NEOF
+       DATA IY,IAST/'Y','*'/
+      DEFINE FILE 1(1000,36,U,KDP)
+      DEFINE FILE 2(1000,36,U,KDP)
+C  INITIALISE DATA FILE ON LUN 2
+C TRANSFER SELECTIVELY FROM OLD(1) TO NEW (2)
+      CALL FDBSET(1,'OLD','SHARE')
+      CALL FDBSET(2,'NEW','SHARE')
+      CALL ASSIGN(1,'DRUG.BAK')
+      CALL ASSIGN(2,'DRUG.NEW')
+       KT=6
+       INI=5
+       KD=2
+       CALL DDRFIL(1,IARG,IND)
+C TRANSFER ALL BY DEFAULT OR IN ERROR
+       DO 1 I=1,54
+ 1     IREF(I)=1
+       KD=1
+C LOAD OLD DIRECTORY
+       CALL DDRFIL(4,IARG,IND)
+C READ OFF DRUGS AND DETERMINE WHETHER TO BE COPIED
+ 10    DO 1000 I=1,NDR
+       IARG=INDIR(I)
+C IF END OF DIRECTORY PROCEED TO COPY
+       IF(IARG.EQ.0) GOTO 2000
+C READ DRUG NAME
+       CALL DRWDR(1,IARG,IND)
+       WRITE(KT,100) KN
+ 100   FORMAT(1X,15A1)
+       READ(INI,101)YES
+ 101   FORMAT(A1)
+       IF(YES.NE.IY) IREF(I)=0
+       IF(YES.EQ.IAST) GOTO 10
+ 1000   CONTINUE
+C PROCESS
+ 2000  WRITE(KT,2001)
+ 2001  FORMAT(' READY TO UPDATE ')
+       READ(INI,101) YES
+       IF(YES.NE.IY) GOTO 10
+C FROM NOW ON TREAT DIRECTORY AS FOR NEW FILE
+       NP=NDR
+       INC=1
+       NS=0
+       DO 3000 I=1,NP
+       IF(IREF(I).EQ.0) GOTO 3000
+C TRANSFER ALL LABELLED FILES
+C FOR READING SCAN ALL OLD DIRECTORY ENTRIES
+       NDR=NP
+       IARG=INDIR(I)
+       CALL DRWDR(1,IARG,IND)
+C TRANSFER TO FILE 2
+       KD=2
+C FOR WRITING USE NEW COUNTER NS
+       NDR=NS
+       CALL DRWDR(2,IARG,IND)
+       NS=NDR
+       KD=1
+ 3000  CONTINUE
+C CLEAR REST OF DIRECTORY
+       K1=NDR+1
+       DO 3005 I=K1,54
+ 3005   INDIR(I)=0
+C REWRITE DIRECTORY
+       KD=2
+       CALL DDRFIL(3,IARG,IND)
+       WRITE(KT,3001)
+ 3001  FORMAT(' FILES TRANSFERRED')
+       STOP
+       END
+/*EOR
+ 
+/*EOR
+ 
+/*EOI
+
