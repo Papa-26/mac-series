@@ -4,18 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "98b859c7f8290002",
+        "id": "a3660cb1225dac75",
         "type": "tabs",
         "children": [
           {
-            "id": "1b137e3f2f9e7dac",
+            "id": "a87b59f4b58abbac",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "canvas",
               "state": {
-                "file": "README.md",
-                "mode": "source",
-                "source": false
+                "file": "html/Untitled.canvas",
+                "viewState": {
+                  "x": 0,
+                  "y": 0,
+                  "zoom": 0
+                }
               }
             }
           }
@@ -48,7 +51,7 @@
             "state": {
               "type": "search",
               "state": {
-                "query": "MacMan.pdf",
+                "query": "",
                 "matchingCase": false,
                 "explainSearch": false,
                 "collapseAll": false,
@@ -65,8 +68,7 @@
               "state": {}
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "horizontal",
@@ -86,7 +88,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "README.md",
+                "file": "html/Untitled.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -103,7 +105,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "README.md",
+                "file": "html/Untitled.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -126,7 +128,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "README.md"
+                "file": "html/Untitled.canvas"
               }
             }
           }
@@ -147,8 +149,12 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "78e86e0d3ccb30c8",
+  "active": "30a4bc2200cecee3",
   "lastOpenFiles": [
+    "html/Untitled.canvas",
+    "Untitled.md",
+    "html/MacMan.html",
+    "html/Untitled Document",
     "README.md",
     "concept.png"
   ]
