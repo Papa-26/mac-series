@@ -1,0 +1,281 @@
+body {
+    margin: 0px;
+    background-image: url(../img/McMasterBackground.png);
+    background-repeat: no-repeat;
+    background-color: rgb(240, 254, 255);
+    max-width: 1400px;
+    height: 850px;
+}
+
+.banner {
+    border: 4px solid #00f;
+    border-radius: 10px;
+    position: fixed;
+    left: 40px;
+    top: 20px;
+    height: auto;
+    width: auto;
+    max-width: 1400px;
+    margin-right: 20px;
+    padding: 10px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 1.2em;
+    color: blue;
+    overflow: auto;
+}
+
+.sidebar {
+    border: 4px solid #00f;
+    border-radius: 10px;
+    position:relative;
+    top: 200px;
+    left: 40px;
+    width: 220px;
+    height: 600px;
+    padding: 5px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 1.2em;
+    color: blue;
+}
+
+.title {
+    position: fixed;
+    text-align: center;
+    text-shadow: 2px 2px #000;
+    font-weight: bold;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 4.50em;
+    color: blue;
+    top: 180px;
+    left: 280px;
+    height: 80px;
+    width: 1200px;
+}
+
+.main{
+    position: fixed;
+    top: 260px;
+    left: 280px;
+    height: inherit;
+    width:auto;
+    max-width: 1200px;
+    padding: 20px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 1.2em;
+    text-align: justify;
+    text-justify: inter-word;  
+    color: blue;
+    overflow: auto;
+}
+
+#scroll {
+    position:fixed;
+    padding: 20px;
+    width: 1160px;
+    height: 550px;
+    left: 300px;
+    top: 280px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    text-align: justify;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 1.2em;
+    color: #00f;
+    padding-bottom: 100px;
+}
+
+#circulation {
+    position:fixed;
+    padding: 20px;
+    max-width: 1160px;
+    height: 600px;
+    left: 300px;
+    top: 170px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    text-align: justify;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 1.2em;
+    color: #00f;
+    padding-bottom: 100px;
+}
+
+.bottom{
+    position:relative;
+    height: 50px;
+    width: 800px;
+}
+ 
+ul {
+    list-style: none;
+}
+
+ul li {
+    margin-bottom: 20px;
+}
+
+table {
+    position:fixed;
+    top: 300px;
+    left: 900px;
+    border: 4px solid #00f;
+}
+
+#manual {
+    position:fixed;
+    left: 350px;
+    top: 500px;
+    width: 500px;
+    height: 600px;
+    font-size: 1.4em;
+}
+
+div.video {
+    position: fixed;
+    left: 200px;
+    width: 1000px;
+}
+
+table.video {
+    position:fixed;
+    overflow-x: hidden;
+    overflow-y: auto;
+    text-align: justify;
+    top:300px;
+    left: 950px;
+    width: 350px;
+    height: 400px;
+    border-radius: 5px;
+    padding: 1em;
+     
+}
+
+p.min {
+    line-height: 1px;
+}
+
+td {
+    border: 2px solid #00f;
+}
+
+div.monitor {
+    position:fixed;
+    width: 600px;
+    height: 450px;
+    top: 350px;
+    left: 350px;
+}
+
+p.video {
+    width: 550px;
+    left: 350px;
+}
+
+div.comment {
+    position: fixed;
+    top: 430px;
+    left: 970px;
+    width: 500px;
+    padding: 20px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 1.2em;
+    color: blue;
+}
+
+div.parsons {
+    position:relative;
+    left:30%;
+}
+
+.bibliography {
+    position:relative;
+    left: 350px;
+    top: 100px;
+    font-size: 1.4em;
+}
+
+p {
+    margin-right: 50px;;
+}
+
+p.quote {
+    background-color: white;
+    border: 2px solid blue;
+    left: 50px;
+    width: inherit;
+    max-width: 1100px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.8em;
+    padding: 5px;
+}
+
+p.bio {
+    position:relative;
+    left: 350px;
+    width: inherit;
+    max-width: 1400px;
+    font-size: 1.2em;
+    padding: 5px;
+   
+}
+
+.indent {
+    position:relative;
+    left: 4%;
+}
+
+div.figure {
+    float: right;
+    width: 222px;
+    margin: 15px 10px 5px 10px;
+}
+
+img.model {
+    float: left;
+    margin-right: 30px;
+    margin-bottom: 30px;
+    border: 1px solid #666;
+    padding: 10px;
+}
+img.figure {
+    float:left;
+    margin-right: 30px;
+    margin-bottom: 30px;
+    border: 1px solid #666;
+    padding: 10px;
+}
+
+div.model {
+    position:fixed;
+    top: 300px;
+}
+
+button.simulate {
+    position:relative;
+    left:40%;
+    border:#00f solid 2px;
+    border-radius: 6px;
+    width: 200px;
+    height: 80px;
+    height: 60px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 1.2em;
+    color:white;
+}
+
+.ref {
+    position: fixed;
+    top: 860px;
+    width:1200px;
+}
+
+.ref2 {
+    position: relative;
+    top: 30px;
+    width:1100px;
+}
+
+img.guy {
+    position:fixed;
+    left: 300px;
+}
