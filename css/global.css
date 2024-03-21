@@ -2,92 +2,69 @@ body {
     margin: 0px;
     background-image: url(../img/McMasterBackground.png);
     background-repeat: no-repeat;
-    background-color: rgb(240, 254, 255);
     background-attachment: fixed;
+    background-color: rgb(240, 254, 255);
     max-width: 1400px;
     height: 850px;
 }
 
-html {
-    scroll-behavior: smooth;
-}
-
-.banner {
+.banner{
     border: 4px solid #00f;
     border-radius: 10px;
-    position: fixed;
-    left: 40px;
-    top: 20px;
-    height: auto;
-    width: inherit;
-    max-width: 1400px;
-    margin-right: 20px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    font-size: 1.2em;
+    color:#00f;
     padding: 10px;
-    font-family: Verdana, Geneva, Tahoma, sans-serif;
-    font-size: 1.2em;
-    color: blue;
-    overflow: auto;
+    height:auto;
+    margin-left: 40px;
 }
 
-.sidebar {
+.trunk{
+    height:auto;
+    margin-left: 40px;
+}
+
+#sidebar{
     border: 4px solid #00f;
     border-radius: 10px;
-    position:relative;
-    top: 200px;
-    left: 40px;
-    width: 220px;
-    height: 600px;
-    padding: 5px;
+    float:left;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
-    font-size: 1.2em;
-    color: blue;
+    font-size: 1.4em;
+    line-height: 1.4;
+    width:280x;
+    height:auto;
+    padding:10px;
+    margin-top: 20px;
 }
 
-.title {
-    position: relative;
-    width: inherit;
-   text-align: center;
+.title{
+    position:relative;
+    width:inherit;
+    height:inherit;
+    margin-right: 0px;
     text-shadow: 2px 2px #000;
     font-weight: bold;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
-    font-size: 4.50em;
+    font-size: 3.50em;
+    text-align: center;
     color: blue;
-    top: 180px;
-    height: 80px;
+    padding-top: 40px;
+    padding-bottom: 20px;
 }
 
 .main{
-    position: fixed;
-    top: 260px;
-    left: 280px;
-    height: inherit;
-    width:auto;
-    max-width: 1200px;
-    padding: 20px;
+    position:relative;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-size: 1.2em;
+    color:#00f;
+    padding: 40px;
+    width:inherit;
+    height:auto;
+    margin-left: 220px;
+    margin-right: 0px;
     text-align: justify;
-    text-justify: inter-word;  
-    color: blue;
-    overflow: auto;
+    text-justify: inter-word;
 }
-
-#scroll {
-    position:fixed;
-    padding: 20px;
-    width: 1160px;
-    left: 300px;
-    top: 280px;
-    height: 800px;
-    overflow-x:auto;
-    overflow-y:scroll;
-    text-align: justify;
-    font-family: Verdana, Geneva, Tahoma, sans-serif;
-    font-size: 1.2em;
-    color: #00f;
-    padding-bottom: 100px;
-}
-
 #circulation {
     position:fixed;
     padding: 20px;
@@ -283,3 +260,5 @@ img.guy {
     position:fixed;
     left: 300px;
 }
+
+
