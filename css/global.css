@@ -3,8 +3,13 @@ body {
     background-image: url(../img/McMasterBackground.png);
     background-repeat: no-repeat;
     background-color: rgb(240, 254, 255);
+    background-attachment: fixed;
     max-width: 1400px;
     height: 850px;
+}
+
+html {
+    scroll-behavior: smooth;
 }
 
 .banner {
@@ -14,7 +19,7 @@ body {
     left: 40px;
     top: 20px;
     height: auto;
-    width: auto;
+    width: inherit;
     max-width: 1400px;
     margin-right: 20px;
     padding: 10px;
@@ -39,17 +44,16 @@ body {
 }
 
 .title {
-    position: fixed;
-    text-align: center;
+    position: relative;
+    width: inherit;
+   text-align: center;
     text-shadow: 2px 2px #000;
     font-weight: bold;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-size: 4.50em;
     color: blue;
     top: 180px;
-    left: 280px;
     height: 80px;
-    width: 1200px;
 }
 
 .main{
@@ -72,11 +76,11 @@ body {
     position:fixed;
     padding: 20px;
     width: 1160px;
-    height: 550px;
     left: 300px;
     top: 280px;
-    overflow-x: hidden;
-    overflow-y: auto;
+    height: 800px;
+    overflow-x:auto;
+    overflow-y:scroll;
     text-align: justify;
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-size: 1.2em;
