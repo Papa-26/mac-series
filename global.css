@@ -265,5 +265,13 @@ left:0px;
 text-align: center;
 }
 
+.footer {
+    position: relative;
+    left:0px;
+    top:0px;
+    width:10px;
+    height:50px;
+}
+
 
 
