@@ -2,8 +2,9 @@ body {
     margin: 0px;
     background-image: url(../img/McMasterBackground.png);
     background-repeat: no-repeat;
-    background-size: cover;
     background-attachment: fixed;
+    background-position: top;
+    background-size: auto 100vh;
     background-color: rgb(240, 254, 255);
     max-width: 1400px;
     height: 850px;
