@@ -2,6 +2,7 @@ body {
     margin: 0px;
     background-image: url(../img/McMasterBackground.png);
     background-repeat: no-repeat;
+    background-size: inherit;
     background-attachment: fixed;
     background-color: rgb(240, 254, 255);
     max-width: 1400px;
