@@ -159,8 +159,8 @@ div.monitor {
     top: 0px;
     left: 20px;
     float:left;
-    margin-right: 50px;
-    margin-bottom:50px;
+    margin-right: 40px;
+    margin-bottom:440px;
     padding:10px;
 }
 
@@ -200,14 +200,15 @@ p {
 }
 
 p.quote {
+position:relative;
     background-color: white;
+    width:90%;
     border: 2px solid blue;
     left: 50px;
-    width: inherit;
-    max-width: 1100px;
     font-family: 'Courier New', Courier, monospace;
     font-size: 0.8em;
     padding: 5px;
+    margin-right:40px;
 }
 
 p.bio {
@@ -231,12 +232,6 @@ p.bio {
     height:auto;
 }
 
-div.figure {
-    float: right;
-    width: 222px;
-    margin: 15px 10px 5px 10px;
-}
-
 img.model {
     float: left;
     margin-right: 30px;
@@ -244,12 +239,18 @@ img.model {
     border: 1px solid #666;
     padding: 10px;
 }
+
 img.figure {
     float:left;
-    margin-right: 30px;
-    margin-bottom: 30px;
+    margin-right: 40px;
+    margin-bottom: 15px;
     border: 1px solid #666;
     padding: 10px;
+}
+
+img.guy1{
+    width:99.9%;
+    height:auto;
 }
 
 div.model {
@@ -279,14 +280,26 @@ button.simulate {
 .ref2 {
     position: relative;
     top: 30px;
-    width:1100px;
+    width:90%;
     background-color: rgba(255, 255, 255, 0.4);    
 }
 
 .guy {
+    border:#000 solid 1px;
+    padding:10px;
     position: relative;
-    left:0px;
-    text-align: center;
+    width:50%;
+    float:left;
+    margin-right:40px;
+    margin-bottom:15px;
+
+}
+
+.Guyton1{
+    width:90%;
+    height:auto;
+    padding:10px;
+    border: 1px solid #000;
 }
 
 .vidRight{
@@ -299,6 +312,7 @@ button.simulate {
 
 .white{
     position:relative;
+    width:auto;
     padding-top: 5px;
     padding-left:5px;
     background-color:rgba(255,255,255,0.4);
@@ -311,7 +325,7 @@ button.simulate {
     width:auto;
     max-width:700px;
     height:auto;
-    margin-right:50px;
+    margin-right:40px;
     margin-bottom:20px;
     float:left;
     background-color:#bbf;
