@@ -200,7 +200,7 @@ p {
 }
 
 p.quote {
-position:relative;
+    position:relative;
     background-color: white;
     width:90%;
     border: 2px solid blue;
@@ -351,4 +351,9 @@ ul.sum{
     font-size:1.2em;
     padding-left:20%;
     padding-bottom:30px;
+}
+
+p.stress{
+    font-size:1.1em;
+    font-weight: 500;
 }
