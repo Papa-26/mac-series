@@ -346,3 +346,9 @@ button.simulate {
     border:2px solid #00f;
     margin: 5px;
 }
+
+ul.sum{
+    font-size:1.2em;
+    padding-left:20%;
+    padding-bottom:30px;
+}
